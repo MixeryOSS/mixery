@@ -1,0 +1,593 @@
+<script setup lang="ts">
+import MixeryWindow from '../windows/MixeryWindow.vue';
+import TitlebarButton from '../windows/TitlebarButton.vue';
+import MixeryIcon from '../icons/MixeryIcon.vue';
+import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import { CanvasRenderer } from '@/canvas/CanvasRenderer';
+import { useTrackableXY } from '../composes';
+import { MixeryUI } from '@/handling/MixeryUI';
+import { GlobalRenderers } from '@/canvas/GlobalRenderers';
+import { NoteClipNode, type IPort, type INode, type PortsConnection } from '@mixery/engine';
+
+const props = defineProps<{
+    visible: boolean,
+    workspaceId: string,
+}>();
+const emits = defineEmits(["update:visible"]);
+const grid = ref(50); // 50px grid size
+const x = ref(0);
+const y = ref(0);
+const zoomRatio = ref(1);
+const wireCutterMode = ref(false);
+
+const canvas = ref<HTMLCanvasElement>();
+const canvasRenderer = ref<CanvasRenderer>();
+const movePad = ref<HTMLDivElement>();
+const zoomBar = ref<HTMLDivElement>();
+
+function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
+function getNodes() { return getWorkspace().project.nodes; }
+
+const selectedNodeRefForRendering = ref(getWorkspace().selectedNode);
+
+function computeNodeViewBox(node: INode<any, any>) {
+    const { nodeX, nodeY } = node;
+    const inputs = node.getInputPorts();
+    const outputs = node.getOutputPorts();
+    const renderX = nodeX + x.value, renderY = nodeY + y.value;
+    const renderWidth = node.nodeWidth;
+    const renderHeight = 22 + (inputs.length + outputs.length) * 18;
+    return { renderX, renderY, renderWidth, renderHeight };
+}
+
+function linkConnection(wire: PortsConnection) {
+    const fromNode = getNodes().nodes.find(v => v.nodeId == wire.from[0]);
+    const toNode = getNodes().nodes.find(v => v.nodeId == wire.to[0]);
+    if (!fromNode || !toNode) return undefined;
+            
+    const fromPortIndex = fromNode.getOutputPorts().findIndex(v => v.portId == wire.from[1]);
+    const toPortIndex = toNode.getInputPorts().findIndex(v => v.portId == wire.to[1]);
+    if (fromPortIndex == -1 || toPortIndex == -1) return undefined;
+
+    return { fromNode, toNode, fromPortIndex, toPortIndex };
+}
+
+function computeConnectionGeometry(wire: PortsConnection) {
+    const linked = linkConnection(wire);
+    if (!linked) return undefined;
+
+    const { fromNode,toNode, fromPortIndex, toPortIndex } = linked;
+    const fromX = x.value + fromNode.nodeX + fromNode.nodeWidth - 2;
+    const fromY = y.value + fromNode.nodeY + 28 + (fromNode.getInputPorts().length + fromPortIndex) * 18;
+    const toX = x.value + toNode.nodeX + 2;
+    const toY = y.value + toNode.nodeY + 28 + toPortIndex * 18;
+    return { fromX, fromY, toX, toY, fromNode, toNode, fromPortIndex, toPortIndex };
+}
+
+function distance(x1: number, y1: number, x2: number, y2: number) {
+    const vx = x2 - x1;
+    const vy = y2 - y1;
+    return Math.sqrt(vx * vx + vy * vy);
+}
+
+function getPortColor(type: string) {
+    switch (type) {
+        case "mixery:midi": return "#ffaf5c";
+        case "mixery:signal": return "#c187ff";
+        default: return "#ff5c5c";
+    }
+}
+
+let lastNode: INode<any, any> | undefined;
+let lastPort: IPort<any> | undefined;
+let lastPortType: "input" | "output" | undefined;
+let targettingPort: IPort<any> | undefined;
+let targettingWire: PortsConnection | undefined;
+
+onMounted(() => {
+    const renderer = new CanvasRenderer(canvas.value!, render);
+    canvasRenderer.value = renderer;
+    renderer.useObserveResize();
+    GlobalRenderers.CALLBACKS.push(() => render());
+
+    const gridColor = "#ffffff2f";
+    const centerColor = "#ffffff7f";
+
+    function render() {
+        if (!canvas.value) return;
+        renderer.startRender();
+        const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
+
+        const centerX = x.value;
+        const centerY = y.value;
+        const viewWidth = canvas.value.offsetWidth / zoomRatio.value;
+        const viewHeight = canvas.value.offsetHeight / zoomRatio.value;
+        renderer.ctx.scale(zoomRatio.value, zoomRatio.value);
+        renderer.ctx.translate(viewWidth / 2, viewHeight / 2);
+
+        // Render grid
+        const gridSize = grid.value;
+        const gridXOffset = centerX % gridSize;
+        const gridYOffset = centerY % gridSize;
+        const gridHalfWidth = Math.ceil(viewWidth / 2 / gridSize);
+        const gridHalfHeight = Math.ceil(viewHeight / 2 / gridSize);
+        for (let x = -gridHalfWidth; x <= gridHalfWidth; x++) {
+            for (let y = -gridHalfHeight; y <= gridHalfHeight; y++) {
+                const originX = gridXOffset + x * gridSize;
+                const originY = gridYOffset + y * gridSize;
+                renderer.fillRect(originX - 2, originY - 2, 4, 4, gridColor);
+            }
+        }
+
+        // Render center
+        renderer.fillRect(x.value - 10, y.value - 1, 20, 2, centerColor);
+        renderer.fillRect(x.value - 1, y.value - 10, 2, 20, centerColor);
+
+        function drawPort(port: IPort<any>, type: "input" | "output", width: number, x: number, y: number) {
+            const portName = port.portName ?? port.portId;
+            const textWidth = renderer.ctx.measureText(portName).width;
+            const portColor = getPortColor(port.type);
+
+            renderer.ctx.globalAlpha = 0.35;
+            renderer.fillRoundRect(x + 4, y, width - 8, 16, 4, portColor);
+            renderer.ctx.globalAlpha = 1;
+            renderer.fillText(portName, x + (type == "output"? (width - textWidth - 8) : 8), y + 12, "12px Nunito Sans", "#ffffff");
+
+            let tX = 0;
+            switch (type) {
+                case "input": tX = 1; break;
+                case "output": tX = width - 5; break;
+                default: break;
+            }
+            
+            renderer.ctx.translate(x + tX, y + 4);
+            renderer.begin().roundRect(0, 0, 4, 8, 1)
+            .fill(portColor)
+            .stroke("#000000", 1)
+            .end();
+            renderer.ctx.translate(-x - tX, -y - 4);
+
+            return y + 18;
+        }
+
+        // We will have node controls on the (right?) panel
+        getNodes().nodes.forEach(node => {
+            const inputs = node.getInputPorts();
+            const outputs = node.getOutputPorts();
+            const { renderX, renderY, renderWidth, renderHeight } = computeNodeViewBox(node);
+            // TODO test if visible otherwise discard
+            
+            const selected = node == getWorkspace().selectedNode;
+            const nodeName = node.nodeName ?? node.typeId;
+            
+            renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).fill("#1f1f1f").end();
+            renderer.fillRoundRect(renderX, renderY, renderWidth, 16, 4, "#4f4f4f");
+            renderer.fillText(nodeName, renderX + 4, renderY + 12, "12px Nunito Sans", "#ffffff");
+            renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).stroke(selected? "#ffffff" : "#7f7f7f", selected? 2 : 1).end();
+
+            let currentY = renderY + 20;
+            inputs.forEach(port => currentY = drawPort(port, "input", renderWidth, renderX, currentY));
+            outputs.forEach(port => currentY = drawPort(port, "output", renderWidth, renderX, currentY));
+
+            if (selected) {
+                renderer.begin()
+                .roundRect(renderX - 6, renderY - 6, renderWidth + 12, renderHeight + 12, 7)
+                .stroke("#0000007f", 4)
+                .stroke(accent, 2)
+                .end();
+            }
+        });
+
+        // Render wires
+        getNodes().connections.forEach(wire => {
+            const geom = computeConnectionGeometry(wire);
+            if (!geom) return;
+
+            const { fromX, fromY, toX, toY } = geom;
+            const fromPort = geom.fromNode.getOutputPorts()[geom.fromPortIndex];
+
+            renderer.begin()
+            .pointer(fromX, fromY)
+            .line(toX, toY);
+            if (targettingWire == wire) renderer.stroke("#ff0000", 8);
+            renderer.stroke("#0000007f", 4)
+            .stroke(getPortColor(fromPort.type), 2)
+            .end();
+        });
+
+        // Render dragging wire
+        if (lastPort) {
+            const fromPortIndex = (lastPortType == "output"? lastPort.node.getOutputPorts() : lastPort.node.getInputPorts()).indexOf(lastPort);
+            const fromX = x.value + lastPort.node.nodeX + (lastPortType == "output"? lastPort.node.nodeWidth - 2 : 2);
+            const fromY = y.value + lastPort.node.nodeY + 28 + (fromPortIndex + (lastPortType == "output"? lastPort.node.getInputPorts().length : 0)) * 18;
+            let toX = canvasRenderer.value!.mouseX / zoomRatio.value - viewWidth / 2;
+            let toY = canvasRenderer.value!.mouseY / zoomRatio.value - viewHeight / 2;
+
+            if (targettingPort) {
+                let toPortIndex = (lastPortType == "output"? targettingPort.node.getInputPorts() : targettingPort.node.getOutputPorts()).indexOf(targettingPort);
+                toX = x.value + targettingPort.node.nodeX + (lastPortType == "output"? 2 : targettingPort.node.nodeWidth - 2);
+                toY = y.value + targettingPort.node.nodeY + 28 + ((lastPortType == "output"? 0 : targettingPort.node.getInputPorts().length) + toPortIndex) * 18;
+            }
+
+            renderer.begin()
+            .pointer(fromX, fromY)
+            .line(toX, toY)
+            .stroke("#0000007f", 4)
+            .stroke(accent, 2)
+            .end();
+        }
+    }
+
+    useTrackableXY(movePad.value!, x, y);
+    useTrackableXY(zoomBar.value!, zoomRatio, undefined, {
+        scale: 0.01,
+        minX: 0.1,
+        maxX: 10
+    });
+
+    watch(x, render);
+    watch(y, render);
+    watch(zoomRatio, render);
+});
+
+function addNode() {
+    let node = new NoteClipNode(Math.random().toString()); // TODO replace with random string
+    node.nodeX = 100;
+    node.nodeY = 25;
+    getNodes().nodes.push(node);
+    GlobalRenderers.sendRedrawRequest();
+}
+
+function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort<any>, portType?: "input" | "output") => any) {
+    const nodes = getNodes().nodes;
+    const pointerX = (event.offsetX - canvas.value!.offsetWidth / 2) / zoomRatio.value;
+    const pointerY = (event.offsetY - canvas.value!.offsetHeight / 2) / zoomRatio.value;
+
+    for (let i = nodes.length - 1; i >= 0; i--) {
+        const node = nodes[i];
+        const { renderX, renderY, renderWidth, renderHeight } = computeNodeViewBox(node);
+
+        if (
+            (pointerX >= renderX && pointerX <= renderX + renderWidth) &&
+            (pointerY >= renderY && pointerY <= renderY + renderHeight)
+        ) {
+            // TODO ports hit test
+            const inputs = node.getInputPorts();
+            const outputs = node.getOutputPorts();
+
+            for (let i = 0; i < inputs.length; i++) {
+                const port = inputs[i];
+                const portY = renderY + 20 + i * 18;
+                if (pointerY >= portY && pointerY <= portY + 16) {
+                    cb(node, port, "input");
+                    return;
+                }
+            }
+
+            for (let i = 0; i < outputs.length; i++) {
+                const port = outputs[i];
+                const portY = renderY + 20 + (inputs.length + i) * 18;
+                if (pointerY >= portY && pointerY <= portY + 16) {
+                    cb(node, port, "output");
+                    return;
+                }
+            }
+
+            cb(node);
+            return;
+        }
+    }
+}
+    
+// TODO should we have multiple tools for nodes editor?
+function onPointerDown(event: PointerEvent) {
+    canvasRenderer.value!.mouseX = event.offsetX;
+    canvasRenderer.value!.mouseY = event.offsetY;
+
+    if (targettingWire) {
+        const linked = linkConnection(targettingWire);
+        if (!linked) return;
+        getNodes().disconnect(linked.fromNode.getOutputPorts()[linked.fromPortIndex], linked.toNode.getInputPorts()[linked.toPortIndex]);
+        targettingWire = undefined;
+        wireCutterMode.value = false;
+        GlobalRenderers.sendRedrawRequest();
+        return;
+    }
+
+    nodeClick(event, (node, port, type) => {
+        getWorkspace().selectedNode = node;
+        selectedNodeRefForRendering.value = node;
+        lastNode = node;
+        lastPort = port;
+        lastPortType = type;
+        getNodes().nodes.splice(getNodes().nodes.indexOf(node), 1);
+        getNodes().nodes.push(node);
+        GlobalRenderers.sendRedrawRequest();
+    });
+}
+function onPointerMove(event: PointerEvent) {
+    canvasRenderer.value!.mouseX = event.offsetX;
+    canvasRenderer.value!.mouseY = event.offsetY;
+
+    const { connections } = getNodes();
+    const viewWidth = canvas.value!.offsetWidth / zoomRatio.value;
+    const viewHeight = canvas.value!.offsetHeight / zoomRatio.value;
+    const worldX = canvasRenderer.value!.mouseX / zoomRatio.value - viewWidth / 2;
+    const worldY = canvasRenderer.value!.mouseY / zoomRatio.value - viewHeight / 2;
+    const solidify = 5;
+
+    let shouldUpdate = targettingWire != undefined;
+    targettingWire = undefined;
+    for (let i = 0; i < connections.length; i++) {
+        const connection = connections[i];
+        const geom = computeConnectionGeometry(connection);
+        if (!geom) continue;
+
+        // Pass 1: AABB
+        const minX = Math.min(geom.fromX, geom.toX);
+        const minY = Math.min(geom.fromY, geom.toY);
+        const maxX = Math.max(geom.fromX, geom.toX);
+        const maxY = Math.max(geom.fromY, geom.toY);
+        if (
+            worldX >= minX - solidify &&
+            worldX <= maxX + solidify &&
+            worldY >= minY - solidify &&
+            worldY <= maxY + solidify
+        ) {
+            // Pass 2: Precise line collision
+            const length = distance(geom.fromX, geom.fromY, geom.toX, geom.toY);
+            const d1 = distance(worldX, worldY, geom.fromX, geom.fromY);
+            const d2 = distance(worldX, worldY, geom.toX, geom.toY);
+
+            if (d1 + d2 >= length - 0.5 && d1 + d2 <= length + 0.5) {
+                if (targettingWire == connection) shouldUpdate = false;
+                targettingWire = connection;
+                break;
+            }
+        }
+    }
+
+    if (shouldUpdate) {
+        GlobalRenderers.sendRedrawRequest();
+        wireCutterMode.value = !!targettingWire;
+    }
+
+    if (!lastNode) return;
+    if (lastPort) {
+        targettingPort = undefined;
+
+        nodeClick(event, (node, port, type) => {
+            if (lastPortType == type) return;
+            if (lastNode == node) return;
+            if (lastPort?.type != port?.type) return;
+            targettingPort = port;
+        });
+    } else {
+        lastNode.nodeX += event.movementX / zoomRatio.value;
+        lastNode.nodeY += event.movementY / zoomRatio.value;
+    }
+
+    GlobalRenderers.sendRedrawRequest();
+}
+function onPointerUp(event: PointerEvent) {
+    if (lastNode) {
+        if (lastPort && targettingPort) {
+            if (lastPortType == "output") getNodes().connect(lastPort, targettingPort);
+            else getNodes().connect(targettingPort, lastPort);
+        }
+
+        lastNode = undefined;
+        lastPort = undefined;
+        lastPortType = undefined;
+        targettingPort = undefined;
+        GlobalRenderers.sendRedrawRequest();
+    }
+
+    if (event.pointerType != "mouse") {
+        canvasRenderer.value!.mouseX = -1;
+        canvasRenderer.value!.mouseY = -1;
+    }
+}
+
+function deleteNode(node: INode<any, any>) {
+    getNodes().connections.map(wire => {
+        if (!(wire.from[0] == node.nodeId || wire.to[0] == node.nodeId)) return undefined;
+
+        const linked = linkConnection(wire);
+        if (!linked) return;
+        const fromPort = linked.fromNode.getOutputPorts()[linked.fromPortIndex];
+        const toPort = linked.toNode.getInputPorts()[linked.toPortIndex];
+        return [fromPort, toPort];
+    }).forEach(a => {
+        if (!a) return;
+        const [fromPort, toPort] = a;
+        getNodes().disconnect(fromPort, toPort);
+    });
+
+    getNodes().nodes.splice(getNodes().nodes.indexOf(node));
+    getWorkspace().selectedNode = undefined;
+    selectedNodeRefForRendering.value = undefined;
+}
+</script>
+
+<template>
+    <MixeryWindow title="Nodes" :width="900" :height="500" resizable :visible="props.visible">
+        <template v-slot:title-left>
+            <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
+        </template>
+        <template v-slot:title-right>
+            <TitlebarButton @click="emits('update:visible', !props.visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
+        </template>
+        <canvas
+            ref="canvas"
+            @pointerdown="onPointerDown"
+            @pointermove="onPointerMove"
+            @pointerup="onPointerUp"
+            :class="{ wireCutterMode: wireCutterMode }"
+        ></canvas>
+        <div class="editor-controls">
+            <div class="move-pad" ref="movePad"></div>
+            <div class="button" ref="zoomBar">
+                <MixeryIcon type="add" />
+                <div class="label">{{ (zoomRatio * 100).toFixed(0) }}%</div>
+            </div>
+            <div class="button" @click="addNode">
+                <MixeryIcon type="add" />
+                <div class="label">Add</div>
+            </div>
+        </div>
+        <div class="node-controls">
+            <input
+                class="node-name"
+                :value="selectedNodeRefForRendering? (selectedNodeRefForRendering.nodeName ?? selectedNodeRefForRendering.typeId) : 'Not selected'"
+                @input="getWorkspace().selectedNode? (getWorkspace().selectedNode!.nodeName = ($event.target as any).value) : 1; GlobalRenderers.sendRedrawRequest()"
+            >
+            <div class="node-control-entry" v-for="control in (selectedNodeRefForRendering?.getControls() ?? [])">
+                <div class="node-control-label">{{ control.label }}</div>
+                <input
+                    :type="(typeof control.value == 'string'? 'text' : 'number')"
+                    class="node-control-input"
+                    :value="control.value"
+                    @input="control.value = (typeof control.value == 'string'? ($event.target as any).value : +($event.target as any).value)"
+                >
+            </div>
+            <div class="button delete"
+                @click="deleteNode(getWorkspace().selectedNode!); GlobalRenderers.sendRedrawRequest()"
+                v-if="selectedNodeRefForRendering"
+            >Delete Node</div>
+        </div>
+    </MixeryWindow>
+</template>
+
+<style scoped lang="scss">
+canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+
+    &.wireCutterMode {
+        cursor: not-allowed;
+    }
+}
+
+.editor-controls {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 0;
+
+    > * {
+        background-color: #171717;
+        border-radius: 8px;
+        margin-bottom: 2px;
+        border: 1px solid #050505;
+        box-shadow: 0 0 8px #000000;
+        transition: 0.1s background-color;
+        white-space: nowrap;
+
+        &:hover {
+            background-color: #1f1f1f;
+        }
+
+        &:active {
+            background-color: #272727;
+        }
+    }
+
+    .move-pad {
+        width: 50px;
+        height: 50px;
+        cursor: grab;
+        touch-action: none;
+    }
+    
+    .button {
+        display: flex;
+        flex-direction: row;
+        padding: 2px 4px;
+        height: 25px;
+        width: fit-content;
+        touch-action: none;
+
+        .label {
+            margin: 0 4px;
+        }
+    }
+}
+
+.node-controls {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    padding: 4px 4px;
+    background-color: #171717;
+    border-radius: 8px;
+    border: 1px solid #050505;
+    box-shadow: 0 0 8px #000000;
+    display: flex;
+    flex-direction: column;
+
+    > * {
+        margin-bottom: 4px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .button {
+        background-color: #ffffff0f;
+        border: 1px solid #ffffff1f;
+        height: 24px;
+        padding: 0 4px;
+        border-radius: 4px;
+        text-align: center;
+
+        &:hover {
+            background-color: #ffffff1f;
+        }
+
+        &.delete {
+            background-color: #ff5c5c;
+            border: 1px solid #ff7f7f;
+
+            &:hover {
+                background-color: #ff7f7f;
+            }
+        }
+    }
+
+    input {
+        font-family: unset;
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        color: unset;
+        display: inline-block;
+        padding: unset;
+        outline: none;
+        height: 24px;
+        padding: 0 4px;
+        transition: 0.1s background-color, 0.1s border;
+        font-size: 14px;
+
+        &:hover {
+            background-color: #ffffff0f;
+            border: 1px solid #ffffff1f;
+        }
+    }
+
+    .node-control-entry {
+        display: flex;
+        flex-direction: column;
+
+        .node-control-label {
+            font-size: 12px;
+            color: #8c8c8c;
+            padding: 0 4px;
+        }
+    }
+}
+</style>

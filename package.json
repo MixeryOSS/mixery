@@ -1,0 +1,14 @@
+{
+  "name": "@mixery/mixery",
+  "version": "1.0.0",
+  "description": "Mixery Digital Audio Workspace for the web",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": {
+    "name": "The Mixery Contributors",
+    "url": "https://github.com/MixeryOSS"
+  },
+  "license": "GPL-3.0-or-later"
+}

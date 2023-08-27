@@ -1,0 +1,17 @@
+{
+    // tsconfig.json for typechecking only
+    // The module will be built by esbuild
+    "compilerOptions": {
+        "module": "NodeNext",
+        "target": "ESNext",
+        "incremental": true,
+        "declaration": true,
+        "outDir": "dist"
+    },
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

@@ -1,0 +1,453 @@
+<script setup lang="ts">
+import MixeryWindow from '../windows/MixeryWindow.vue';
+import TitlebarButton from '../windows/TitlebarButton.vue';
+import WindowToolsbar from '../windows/WindowToolsbar.vue';
+import MixeryIcon from '../icons/MixeryIcon.vue';
+import FancyScrollbar from './universal/FancyScrollbar.vue';
+import type { ClippedNote, NotesClip } from '@mixery/engine';
+import { computed, onMounted, ref, watch, type ShallowRef, render } from 'vue';
+import { CanvasRenderer } from '../../canvas/CanvasRenderer';
+import { MidiText } from '../MidiText';
+import { useTrackableXY } from '../composes';
+import { Tools } from "../../handling/Tools";
+import type { ToolContext, ToolObject } from '@/handling/ITool';
+import { Snapper } from '@/handling/Snapper';
+import { GlobalRenderers } from '@/canvas/GlobalRenderers';
+import { MixeryUI } from '@/handling/MixeryUI';
+
+const props = defineProps<{
+    visible: boolean,
+    workspaceId: string,
+    seekPointer: number,
+}>();
+const emits = defineEmits(["update:visible", "update:seekPointer"]);
+
+function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
+function getProject() { return getWorkspace().project; }
+function getSelectedClip() { return getWorkspace().selectedClip; }
+
+const canvas = ref<HTMLCanvasElement>();
+const scrollHandleX = ref<HTMLDivElement>();
+const scrollHandleY = ref<HTMLDivElement>();
+const zoomHandle = ref<HTMLSpanElement>();
+const canvasRenderer = ref<CanvasRenderer>();
+
+const scrollX = ref(0); // TODO track time instead
+const scrollY = ref(0);
+const zoomX = ref(96); // 96px per beat (100%)
+const zoomY = ref(24); // 24px per line
+const pageHeight = computed(() => zoomY.value * 128);
+const scrollHandleYTop = computed(() => {
+    const viewHeight = canvas.value?.offsetHeight ?? 100;
+    const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
+    const scrollProgress = scrollY.value / (pageHeight.value - viewHeight);
+    return (((viewHeight - handleHeight) * scrollProgress) / viewHeight) * 100 - 0.1;
+});
+const pianoWidth = ref(100);
+const scrollbarHeight = ref(40);
+const clipDuration = ref(96);
+const seekPointer = computed({
+    get() { return props.seekPointer - getSelectedClip().startAtUnit; },
+    set(v) { emits("update:seekPointer", v + getSelectedClip().startAtUnit); }
+});
+
+const snap = ref(96 / 8);
+const tools = Tools.LIST.map(v => v());
+const selectedTool = ref(tools[0]);
+
+class NoteObject implements ToolObject {
+    constructor(public readonly unwrap: ClippedNote) {}
+
+    get startPosition(): number { return this.unwrap.startAtUnit; }
+    set startPosition(v: number) { this.unwrap.startAtUnit = v; }
+
+    get duration(): number { return this.unwrap.durationUnit; }
+    set duration(v: number) { this.unwrap.durationUnit = v; }
+
+    get trackPosition(): number { return this.unwrap.midiIndex; }
+    set trackPosition(v: number) { this.unwrap.midiIndex = v; }
+}
+const toolContext: ToolContext = {
+    createObject() {
+        let note: ClippedNote = { midiIndex: 0, startAtUnit: 0, durationUnit: 0, velocity: 0.8 };
+        getSelectedClip().notes.push(note);
+        return new NoteObject(note);
+    },
+    deleteObject(obj) {
+        const idx = getSelectedClip().notes.indexOf(obj.unwrap as unknown as ClippedNote);
+        getSelectedClip().notes.splice(idx, 1);
+    },
+    hitTest(position, trackPosition) {
+        let note = getSelectedClip().notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
+        return note? new NoteObject(note) : undefined;
+    },
+    selectObject(obj) {
+        // TODO
+    },
+    get snapSegmentSize() { return snap.value; }
+};
+
+onMounted(() => {
+    const renderer = new CanvasRenderer(canvas.value!, render);
+    canvasRenderer.value = renderer;
+    renderer.useObserveResize();
+    GlobalRenderers.CALLBACKS.push(render);
+
+    const gridColor = ["#ffffff1f", "#ffffff2f"];
+    const hoveredRowBg = "#ffffff1f";
+    const hoveredRowPianoBg = "#0000001f";
+    const velocityBarBg = "#0000003f";
+    const velocityBarFg = "#000000af";
+    const noteBorder = "#0000007f";
+    const noteBg = ["#efefef", "#0f0f0f"];
+    const noteFg = ["#000000", "#ffffff"];
+    const noteHg = ["#ffffff", "#3f3f3f"];
+
+    function render() {
+        if (!canvas.value) return;
+        renderer.startRender();
+        clipDuration.value = getSelectedClip().durationUnit;
+        const fancy = getWorkspace().settings.fancyRendering;
+        const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
+        const rowsPerScreen = Math.ceil(canvas.value!.offsetHeight / zoomY.value) + 1;
+        const beatsPerScreen = Math.ceil(canvas.value!.offsetWidth / zoomX.value) + 1;
+        const firstRowOffset = scrollY.value % zoomY.value;
+        const firstRowFlippedIndex = Math.floor(scrollY.value / zoomY.value);
+        const firstBeatOffset = scrollX.value % 96;
+        const renderVelocityBar = zoomY.value >= 20;
+        const renderNoteName = zoomY.value >= 14;
+        const seekX = (seekPointer.value - scrollX.value) * zoomX.value / 96;
+        const endOfClipX = (getSelectedClip().durationUnit - scrollX.value) * zoomX.value / 96;
+
+        renderer.fillRect(pianoWidth.value + seekX, 0, 2, canvas.value!.offsetHeight, accent);
+        renderer.fillRect(pianoWidth.value + endOfClipX, 0, 2, canvas.value!.offsetHeight, "#ff7f7f");
+        
+        for (let i = 0; i < beatsPerScreen; i++) {
+            const beatX = i * zoomX.value - firstBeatOffset * zoomX.value / 96;
+            const beatIndex = i + Math.floor(scrollX.value / 96);
+            const lineWidth = beatIndex % 4 == 0? 4 : 2;
+            const gCol = gridColor[beatIndex % 4 == 0? 1 : 0];
+            renderer.fillRect(pianoWidth.value + beatX - lineWidth / 2, 0, lineWidth, canvas.value!.offsetHeight, gCol);
+        }
+
+        for (let i = -1; i < rowsPerScreen; i++) {
+            const rowY = i * zoomY.value - firstRowOffset;
+            const index = 127 - i - firstRowFlippedIndex;
+            const noteName = MidiText.midiToNoteName(index);
+            const bg = noteBg[noteName.includes("#")? 1 : 0];
+            const fg = noteFg[noteName.includes("#")? 1 : 0];
+            const hg = noteHg[noteName.includes("#")? 1 : 0];
+            const noteWidth = noteName.includes("#")? pianoWidth.value * 0.7 : pianoWidth.value;
+            const highlightEnd = noteName.includes("#")? noteWidth + 2 : noteWidth;
+            renderer.fillRect(0, rowY, noteWidth, zoomY.value * 2, bg);
+            renderer.fillRect(0, rowY + zoomY.value - 1, pianoWidth.value, 1, noteName.match(/^C\d+/)? "#0000007f" : "#0000001f");
+            
+            if (fancy) {
+                // Note highlights
+                renderer.fillRect(0, rowY, noteWidth, 2, hg);
+                renderer.fillRect(highlightEnd - 4, rowY, 2, zoomY.value - 1, hg);
+            }
+
+            renderer.fillText(noteName, 10, rowY + 17, "12px Nunito Sans", fg);
+            renderer.fillRect(pianoWidth.value, rowY - 1, canvas.value!.offsetWidth, 2, gridColor[0]);
+
+            if (renderer.testMouseRect(0, rowY, canvas.value!.offsetWidth, zoomY.value)) {
+                renderer.fillRect(pianoWidth.value, rowY, canvas.value!.offsetWidth, zoomY.value, hoveredRowBg);
+                renderer.fillRect(0, rowY, pianoWidth.value, zoomY.value, hoveredRowPianoBg);
+            }
+        }
+        
+        renderer.fillRect(pianoWidth.value - 2, 0, 2, canvas.value!.offsetHeight, "#1f1f1f");
+
+        getSelectedClip().notes.forEach(note => {
+            const index = 127 - note.midiIndex - firstRowFlippedIndex;
+            let noteX = (note.startAtUnit - scrollX.value) * zoomX.value / 96;
+            let noteWidth = note.durationUnit * zoomX.value / 96;
+            if (noteX < 0) {
+                let delta = -noteX;
+                noteX = 0;
+                noteWidth -= delta;
+            }
+            const noteY = index * zoomY.value - firstRowOffset;
+            if (noteY < -zoomY.value || noteWidth <= 0) return;
+
+            const noteName = MidiText.midiToNoteName(note.midiIndex);
+            const noteNameWidth = renderer.ctx.measureText(noteName).width;
+            renderer.begin()
+            .roundRect(pianoWidth.value + noteX + 1, noteY + 1, noteWidth - 2, zoomY.value - 2, 4)
+            .fill(note.noteColor ?? accent)
+            .stroke(noteBorder, 1)
+            .end();
+
+            if (renderVelocityBar) {
+                const barHeight = zoomY.value * 4 / 24;
+                renderer.progressBar(pianoWidth.value + noteX + 4, noteY + zoomY.value - barHeight - 4, noteWidth - 8, barHeight, note.velocity, velocityBarFg, velocityBarBg);
+                if (noteWidth >= noteNameWidth + 4) {
+                    renderer.fillText(noteName, pianoWidth.value + noteX + 3, noteY + 14, "12px Nunito Sans", "#000000");
+                }
+            } else if (renderNoteName && noteWidth >= noteNameWidth + 4) {
+                renderer.fillText(noteName, pianoWidth.value + noteX + 3, noteY + zoomY.value / 2 + 4.5, "12px Nunito Sans", "#000000");
+            }
+        });
+    }
+
+    watch(scrollX, render);
+    watch(scrollY, render);
+    watch(zoomX, render);
+    watch(zoomY, render);
+    watch(pianoWidth, render);
+
+    const computedScrollX = computed({
+        get() { return scrollX.value / 96 * zoomX.value; },
+        set(v) { scrollX.value = v * 96 / zoomX.value; }
+    });
+
+    const computedScrollY = computed({
+        get() {
+            const viewHeight = canvas.value!.offsetHeight;
+            const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
+            const scrollProgress = scrollY.value / (pageHeight.value - viewHeight);
+            return (viewHeight - handleHeight) * scrollProgress;
+        },
+        set(v) {
+            const viewHeight = canvas.value!.offsetHeight;
+            const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
+            v /= viewHeight - handleHeight;
+            v *= pageHeight.value - viewHeight;
+            scrollY.value = Math.max(Math.min(v, pageHeight.value - viewHeight), 0);
+        }
+    });
+
+    useTrackableXY(scrollHandleX.value!, computedScrollX, undefined, {
+        minX: 0,
+        scale: 1,
+        shiftScale: 0.1,
+        ctrlScale: 2
+    });
+    useTrackableXY(scrollHandleY.value!, undefined, computedScrollY, {
+        scale: 1,
+        shiftScale: 0.1,
+        ctrlScale: 2
+    });
+
+    const centerZoomX = computed({
+        get() { return zoomX.value; },
+        set(v) {
+            const viewWidth = canvas.value?.offsetWidth ?? 100;
+            const delta = zoomX.value - v;
+            scrollX.value += (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96;
+            zoomX.value = zoomX.value - delta;
+            scrollX.value = Math.max(scrollX.value - (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96, 0);
+        }
+    });
+    const centerZoomY = computed({
+        get() { return zoomY.value; },
+        set(v) {
+            const delta = zoomY.value - v;
+            const viewHeight = canvas.value?.offsetHeight ?? 100;
+            scrollY.value += viewHeight / 2;
+            const lastZoom = zoomY.value;
+            zoomY.value = zoomY.value - delta, 10;
+            const zoomRatio = lastZoom / zoomY.value;
+            scrollY.value = Math.min(Math.max(scrollY.value / zoomRatio - viewHeight / 2, 0), pageHeight.value - viewHeight);
+        }
+    });
+
+    useTrackableXY(zoomHandle.value!, centerZoomX, centerZoomY, {
+        minX: 10,
+        minY: 10,
+        maxY: 50,
+        scale: 0.1,
+        shiftScale: 0.01,
+        ctrlScale: 1
+    });
+});
+
+function onScroll(event: WheelEvent) {
+    event.preventDefault();
+    const viewHeight = canvas.value?.offsetHeight ?? 100;
+    const isTouchpad = Math.abs((event as any).wheelDeltaY) != 120 && event.deltaMode == 0;
+    const wheelX = (event.shiftKey? event.deltaY : event.deltaX) * (isTouchpad? 1 : 0.5);
+    const wheelY = event.shiftKey? event.deltaX : event.deltaY;
+
+    if (event.ctrlKey) {
+        scrollX.value += (event.offsetX - pianoWidth.value) / zoomX.value * 96;
+        zoomX.value = Math.max(zoomX.value - wheelX, 10);
+        scrollX.value = Math.max(scrollX.value - (event.offsetX - pianoWidth.value) / zoomX.value * 96, 0);
+
+        scrollY.value += event.offsetY;
+        const lastZoom = zoomY.value;
+        zoomY.value = Math.min(Math.max(zoomY.value - wheelY / 100, 10), 50);
+        const zoomRatio = lastZoom / zoomY.value;
+        scrollY.value = Math.min(Math.max(scrollY.value / zoomRatio - event.offsetY, 0), pageHeight.value - viewHeight);
+    } else {
+        scrollX.value = Math.max(scrollX.value + wheelX / zoomX.value * 96, 0);
+        scrollY.value = Math.min(Math.max(scrollY.value + wheelY, 0), pageHeight.value - viewHeight);
+    }
+}
+
+function lockPointer(event: PointerEvent) { (event.target as HTMLElement).requestPointerLock(); }
+function unlockPointer(event: PointerEvent) { document.exitPointerLock(); }
+function noContextMenu(event: Event) { event.preventDefault(); }
+
+function canvasMouse(event: PointerEvent, cb: (position: number, midiIndex: number) => any) {
+    const renderer = canvasRenderer.value!;
+    const rowsPerScreen = Math.ceil(canvas.value!.offsetHeight / zoomY.value) + 1;
+    const firstRowOffset = scrollY.value % zoomY.value;
+    const firstRowFlippedIndex = Math.floor(scrollY.value / zoomY.value);
+    const position = Snapper.snap((event.offsetX - pianoWidth.value) / zoomX.value * 96 + scrollX.value, snap.value);
+    
+    for (let i = 0; i < rowsPerScreen; i++) {
+        const rowY = i * zoomY.value - firstRowOffset;
+        const midiIndex = 127 - i - firstRowFlippedIndex;
+
+        if (renderer.testMouseRect(pianoWidth.value, rowY, canvas.value!.offsetWidth, zoomY.value)) {
+            cb(position, midiIndex);
+        }
+    }
+}
+function onCanvasMouseDown(event: PointerEvent) {
+    canvasRenderer.value!.mouseX = event.offsetX;
+    canvasRenderer.value!.mouseY = event.offsetY;
+    canvasMouse(event, (position, midi) => selectedTool.value.onMouseDown(toolContext, event.buttons, position, midi));
+    GlobalRenderers.sendRedrawRequest();
+}
+function onCanvasMouseMove(event: PointerEvent) {
+    event.preventDefault();
+    canvasRenderer.value!.mouseX = event.offsetX;
+    canvasRenderer.value!.mouseY = event.offsetY;
+    canvasMouse(event, (position, midi) => selectedTool.value.onMouseMove(toolContext, event.buttons, position, midi));
+    GlobalRenderers.sendRedrawRequest();
+}
+function onCanvasMouseUp(event: PointerEvent) {
+    event.preventDefault();
+    canvasMouse(event, (position, midi) => selectedTool.value.onMouseUp(toolContext, event.buttons, position, midi));
+    if (event.pointerType != "mouse") {
+        canvasRenderer.value!.mouseX = -1;
+        canvasRenderer.value!.mouseY = -1;
+    }
+    GlobalRenderers.sendRedrawRequest();
+}
+</script>
+
+<template>
+    <MixeryWindow title="Piano Roll" :width=900 :height=500 resizable :visible=props.visible>
+        <template v-slot:title-left>
+            <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
+        </template>
+        <template v-slot:title-right>
+            <TitlebarButton @click="emits('update:visible', !props.visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
+        </template>
+        <template v-slot:toolsbars>
+            <WindowToolsbar>
+                <template v-for="tool in tools">
+                    <TitlebarButton is-icon @click="selectedTool = tool" :highlight="selectedTool.toolName == tool.toolName" v-if="tool.icon">
+                        <MixeryIcon :type="tool.icon as any" />
+                    </TitlebarButton>
+                    <TitlebarButton @click="selectedTool = tool" :highlight="selectedTool.toolName == tool.toolName" v-else>{{ tool.toolName }}</TitlebarButton>
+                </template>
+                <TitlebarButton><span ref="zoomHandle" class="zoom-handle" @pointerdown="lockPointer" @pointerup="unlockPointer">Zoom {{ (zoomX / 0.96).toFixed(0) }}%</span></TitlebarButton>
+            </WindowToolsbar>
+        </template>
+        <div class="inner">
+            <FancyScrollbar
+                v-model:scroll-x="scrollX"
+                v-model:zoom-x="zoomX"
+                v-model:leftbar-width="pianoWidth"
+                v-model:scrollbar-height="scrollbarHeight"
+                v-model:seek="seekPointer"
+                :units-count="clipDuration"
+            />
+            <div class="canvas-container">
+                <canvas class="canvas" ref="canvas"
+                    @wheel="onScroll"
+                    @pointerdown="onCanvasMouseDown"
+                    @pointermove="onCanvasMouseMove"
+                    @pointerup="onCanvasMouseUp"
+                    @contextmenu="noContextMenu"
+                ></canvas>
+                <div class="scrollbar y-axis" ref="scrollHandleY" :style="{ top: `${scrollHandleYTop}%` }"></div>
+            </div>
+        </div>
+        <!--<div class="scrollbar x-axis" ref="scrollHandleX" @pointerdown="lockPointer" @pointerup="unlockPointer"></div>-->
+    </MixeryWindow>
+</template>
+
+<style scoped lang="scss">
+.inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    .canvas-container {
+        position: relative;
+        flex: 1 1 auto;
+
+        .canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    }
+}
+
+.scrollbar {
+    position: absolute;
+    background-color: #ffffff1f;
+    border: 1px solid #ffffff1f;
+    border-radius: 4px;
+    touch-action: none;
+
+    &:hover {
+        background-color: #ffffff3f;
+        border: 1px solid #ffffff3f;
+    }
+
+    &.y-axis {
+        width: 20px;
+        height: 20%;
+        right: 0;
+        cursor: ns-resize;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            width: 10px;
+            height: 2px;
+            background-color: #ffffff3f;
+            box-shadow: 0 -5px #ffffff3f, 0 5px #ffffff3f;
+        }
+    }
+    
+    &.x-axis {
+        left: 50%;
+        translate: -50% 0;
+        width: 30%;
+        height: 20px;
+        bottom: 0;
+        cursor: ew-resize;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            translate: -50% -50%;
+            width: 2px;
+            height: 10px;
+            background-color: #ffffff3f;
+            box-shadow: -5px 0 #ffffff3f, 5px 0 #ffffff3f;
+        }
+    }
+}
+
+.zoom-handle {
+    cursor: move;
+    touch-action: none;
+    display: inline-block;
+}
+</style>
