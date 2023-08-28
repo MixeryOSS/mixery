@@ -59,6 +59,10 @@ onMounted(() => {
     overflow: hidden;
     border: 1px solid #050505;
     display: flex;
+
+    &:last-child {
+        border: 1px solid var(--color-accent);
+    }
     
     .titlebar {
         position: relative;
