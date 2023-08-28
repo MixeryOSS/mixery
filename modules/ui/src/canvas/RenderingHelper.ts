@@ -11,7 +11,7 @@ export namespace RenderingHelper {
 
     export class RenderingManager {
         readonly registered = new Map<symbol, Set<RenderCallback>>();
-        readonly scheduledKeys = new Set<symbol>();
+        readonly scheduledCallbacks = new Set<RenderCallback>();
         scheduledForUpdate = false;
 
         registerCallback(keys: symbol[], callback: RenderCallback) {
@@ -23,7 +23,11 @@ export namespace RenderingHelper {
         }
 
         redrawRequest(...keys: symbol[]) {
-            keys.forEach(key => this.scheduledKeys.add(key));
+            keys.forEach(key => {
+                const callbacks = this.registered.get(key);
+                if (!callbacks) return;
+                callbacks.forEach(cb => this.scheduledCallbacks.add(cb));
+            });
 
             if (!this.scheduledForUpdate) {
                 this.scheduledForUpdate = true;
@@ -32,13 +36,8 @@ export namespace RenderingHelper {
         }
 
         forceRedraw() {
-            this.scheduledKeys.forEach(key => {
-                const callbacks = this.registered.get(key);
-                if (!callbacks) return;
-                callbacks.forEach(cb => cb());
-            });
-
-            this.scheduledKeys.clear();
+            this.scheduledCallbacks.forEach(cb => cb());
+            this.scheduledCallbacks.clear();
             this.scheduledForUpdate = false;
         }
     }
