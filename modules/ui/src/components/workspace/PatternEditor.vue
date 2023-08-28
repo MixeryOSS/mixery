@@ -7,7 +7,7 @@ import PatternTrack from "./pattern/PatternTrack.vue";
 import FancyScrollbar from './universal/FancyScrollbar.vue';
 import { Tools } from '@/handling/Tools';
 import { computed, ref, unref, type ComponentInternalInstance, toRaw, watch, nextTick } from 'vue';
-import type { Clip, PlaylistTrack } from '@mixery/engine';
+import { NoteClipNode, type Clip, type PlaylistTrack } from '@mixery/engine';
 import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
 import { GlobalRenderers } from '@/canvas/GlobalRenderers';
@@ -79,10 +79,15 @@ class ClipObject implements ToolObject {
 const toolContext: ToolContext = {
     get snapSegmentSize() { return snap.value; },
     createObject() {
+        const clipChannel = getWorkspace().selectedNode instanceof NoteClipNode
+            ? (getWorkspace().selectedNode as NoteClipNode).data.channelName
+            : getWorkspace().selectedClip.type == "notes"? getWorkspace().selectedClip.clipChannel
+            : "Default Channel";
+
         const clip: Clip = { // TODO automation clips and audio clips
             type: "notes",
             notes: [],
-            clipChannel: getWorkspace().selectedClip.type == "notes"? getWorkspace().selectedClip.clipChannel : "Default Channel",
+            clipChannel,
             startAtUnit: 0,
             durationUnit: 0
         };
