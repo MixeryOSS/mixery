@@ -36,7 +36,6 @@ const contextMenuY = useParentState<number>("contextMenuY", props, emits);
 
 const canvas = ref<HTMLCanvasElement>();
 const canvasRenderer = ref<CanvasRenderer>();
-const movePad = ref<HTMLDivElement>();
 const zoomBar = ref<HTMLDivElement>();
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
@@ -97,6 +96,7 @@ let lastPort: IPort<any> | undefined;
 let lastPortType: "input" | "output" | undefined;
 let targettingPort: IPort<any> | undefined;
 let targettingWire: PortsConnection | undefined;
+let isMoving = false;
 
 onMounted(() => {
     const renderer = new CanvasRenderer(canvas.value!, render);
@@ -232,7 +232,6 @@ onMounted(() => {
         }
     }
 
-    useTrackableXY(movePad.value!, x, y);
     useTrackableXY(zoomBar.value!, zoomRatio, undefined, {
         scale: 0.01,
         minX: 0.1,
@@ -323,20 +322,29 @@ function onPointerDown(event: PointerEvent) {
         return;
     }
 
+    let nodeClicked: INode<any, any> | undefined;
     nodeClick(event, (node, port, type) => {
         getWorkspace().selectedNode = node;
         selectedNodeRefForRendering.value = node;
-        lastNode = node;
+        nodeClicked = lastNode = node;
         lastPort = port;
         lastPortType = type;
         getNodes().nodes.splice(getNodes().nodes.indexOf(node), 1);
         getNodes().nodes.push(node);
         GlobalRenderers.sendRedrawRequest();
     });
+
+    if (!nodeClicked) isMoving = true;
 }
 function onPointerMove(event: PointerEvent) {
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
+
+    if (isMoving) {
+        x.value += event.movementX / zoomRatio.value;
+        y.value += event.movementY / zoomRatio.value;
+        return;
+    }
 
     const { connections } = getNodes();
     const viewWidth = canvas.value!.offsetWidth / zoomRatio.value;
@@ -399,6 +407,8 @@ function onPointerMove(event: PointerEvent) {
     GlobalRenderers.sendRedrawRequest();
 }
 function onPointerUp(event: PointerEvent) {
+    isMoving = false;
+
     if (lastNode) {
         if (lastPort && targettingPort) {
             if (lastPortType == "output") getNodes().connect(lastPort, targettingPort);
@@ -455,7 +465,6 @@ function deleteNode(node: INode<any, any>) {
             :class="{ wireCutterMode: wireCutterMode }"
         ></canvas>
         <div class="editor-controls">
-            <div class="move-pad" ref="movePad"></div>
             <div class="button" ref="zoomBar">
                 <MixeryIcon type="add" />
                 <div class="label">{{ (zoomRatio * 100).toFixed(0) }}%</div>
@@ -495,6 +504,11 @@ canvas {
     width: 100%;
     height: 100%;
     touch-action: none;
+    cursor: grab;
+
+    &:active {
+        cursor: grabbing;
+    }
 
     &.wireCutterMode {
         cursor: not-allowed;
@@ -525,13 +539,6 @@ canvas {
         }
     }
 
-    .move-pad {
-        width: 50px;
-        height: 50px;
-        cursor: grab;
-        touch-action: none;
-    }
-    
     .button {
         display: flex;
         flex-direction: row;
