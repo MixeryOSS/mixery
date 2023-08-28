@@ -1,9 +1,11 @@
+import { RenderingHelper } from "@/canvas/RenderingHelper";
 import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode } from "@mixery/engine";
 
 export namespace MixeryUI {
     export interface WorkspaceInterface {
         readonly workspace: Workspace;
         readonly id: string;
+        readonly rendering: RenderingHelper.RenderingManager;
         settings: WorkspaceSettings;
         project: Project;
         selectedClip: Clip;
@@ -64,6 +66,7 @@ export namespace MixeryUI {
         const wsInterface: WorkspaceInterface = {
             workspace: ws,
             id,
+            rendering: new RenderingHelper.RenderingManager(),
             settings: {
                 fancyRendering: true,
                 accentColor: [177, 100, 71]

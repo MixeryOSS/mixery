@@ -7,7 +7,7 @@ import Digital1DSlider from '../knobs/Digital1DSlider.vue';
 import Switch from '../knobs/Switch.vue';
 import { computed, ref, watch } from 'vue';
 import { MixeryUI } from "@/handling/MixeryUI";
-import { GlobalRenderers } from '@/canvas/GlobalRenderers';
+import { RenderingHelper } from '@/canvas/RenderingHelper';
 
 const props = defineProps<{
     workspaceId: string,
@@ -17,9 +17,13 @@ const emits = defineEmits(["update:visible"]);
 
 const settings = ref(MixeryUI.workspaces.get(props.workspaceId)!.settings);
 
+function redrawAll() {
+    MixeryUI.workspaces.get(props.workspaceId)!.rendering.redrawRequest(RenderingHelper.Keys.All);
+}
+
 function updateAccentColor() {
     document.body.style.setProperty("--color-accent", `hsl(${settings.value.accentColor[0]}deg, ${settings.value.accentColor[1]}%, ${settings.value.accentColor[2]}%)`);
-    GlobalRenderers.sendRedrawRequest();
+    redrawAll();
 }
 </script>
 
@@ -30,7 +34,7 @@ function updateAccentColor() {
         </template>
         <div class="entry">
             <div class="label">Detailed Rendering</div>
-            <Switch v-model="settings.fancyRendering" @on-update="GlobalRenderers.sendRedrawRequest()" />
+            <Switch v-model="settings.fancyRendering" @on-update="redrawAll()" />
         </div>
         <div class="entry" @pointerup="updateAccentColor" @pointermove="updateAccentColor">
             <div class="label">Accent Color</div>

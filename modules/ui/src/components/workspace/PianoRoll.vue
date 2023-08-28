@@ -12,8 +12,8 @@ import { useTrackableXY } from '../composes';
 import { Tools } from "../../handling/Tools";
 import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
-import { GlobalRenderers } from '@/canvas/GlobalRenderers';
 import { MixeryUI } from '@/handling/MixeryUI';
+import { RenderingHelper } from '@/canvas/RenderingHelper';
 
 const props = defineProps<{
     visible: boolean,
@@ -91,7 +91,11 @@ onMounted(() => {
     const renderer = new CanvasRenderer(canvas.value!, render);
     canvasRenderer.value = renderer;
     renderer.useObserveResize();
-    GlobalRenderers.CALLBACKS.push(render);
+    getWorkspace().rendering.registerCallback([
+        RenderingHelper.Keys.All,
+        RenderingHelper.Keys.SeekPointer,
+        RenderingHelper.Keys.PianoRoll
+    ], () => render());
 
     const gridColor = ["#ffffff1f", "#ffffff2f"];
     const hoveredRowBg = "#ffffff1f";
@@ -310,14 +314,22 @@ function onCanvasMouseDown(event: PointerEvent) {
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
     canvasMouse(event, (position, midi) => selectedTool.value.onMouseDown(toolContext, event.buttons, position, midi));
-    GlobalRenderers.sendRedrawRequest();
+    
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PianoRoll,
+        RenderingHelper.Keys.PatternsEditor
+    );
 }
 function onCanvasMouseMove(event: PointerEvent) {
     event.preventDefault();
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
     canvasMouse(event, (position, midi) => selectedTool.value.onMouseMove(toolContext, event.buttons, position, midi));
-    GlobalRenderers.sendRedrawRequest();
+    
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PianoRoll,
+        RenderingHelper.Keys.PatternsEditor
+    );
 }
 function onCanvasMouseUp(event: PointerEvent) {
     event.preventDefault();
@@ -326,7 +338,11 @@ function onCanvasMouseUp(event: PointerEvent) {
         canvasRenderer.value!.mouseX = -1;
         canvasRenderer.value!.mouseY = -1;
     }
-    GlobalRenderers.sendRedrawRequest();
+
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PianoRoll,
+        RenderingHelper.Keys.PatternsEditor
+    );
 }
 </script>
 

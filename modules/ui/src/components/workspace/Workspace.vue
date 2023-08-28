@@ -16,6 +16,8 @@ import { onMounted, ref, watch } from "vue";
 import { GlobalRenderers } from "@/canvas/GlobalRenderers";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
+import { MixeryUI } from "@/handling/MixeryUI";
+import { RenderingHelper } from "@/canvas/RenderingHelper";
 
 const props = defineProps<{
     workspaceId: string
@@ -36,7 +38,9 @@ const patternEditorVisible = ref(true);
 const nodesEditorVisible = ref(true);
 const settingsWindowVisible = ref(false);
 
-watch(sharedSeekPointer, () => GlobalRenderers.sendRedrawRequest());
+watch(sharedSeekPointer, () => MixeryUI.workspaces.get(props.workspaceId)!.rendering.redrawRequest(
+    RenderingHelper.Keys.SeekPointer
+));
 
 function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
     const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button"), v => v.parentElement);

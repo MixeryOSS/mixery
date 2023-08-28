@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
-import { GlobalRenderers } from '@/canvas/GlobalRenderers';
+import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import type { ClippedNote, PlaylistTrack } from '@mixery/engine';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
@@ -37,9 +37,12 @@ const canvasRenderer = ref<CanvasRenderer>();
 onMounted(() => {
     const renderer = new CanvasRenderer(canvas.value!, render);
     canvasRenderer.value = renderer;
-
     renderer.useObserveResize();
-    GlobalRenderers.CALLBACKS.push(render);
+    getWorkspace().rendering.registerCallback([
+        RenderingHelper.Keys.All,
+        RenderingHelper.Keys.PatternsEditor,
+        RenderingHelper.Keys.SeekPointer
+    ], () => render());
 
     const gridColor = ["#ffffff1f", "#ffffff2f"];
     const normalOutline = "#0000007f";
@@ -148,7 +151,7 @@ function onScroll(event: WheelEvent) {
         scrollX.value = Math.max(scrollX.value + wheelX / zoomX.value * 96, 0);
     }
 
-    GlobalRenderers.sendRedrawRequest();
+    getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
 }
 </script>
 

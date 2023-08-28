@@ -6,10 +6,10 @@ import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { useTrackableXY, useParentState } from '../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
-import { GlobalRenderers } from '@/canvas/GlobalRenderers';
 import { NoteClipNode, type IPort, type INode, type PortsConnection } from '@mixery/engine';
 import type { ContextMenuEntry } from '../contextmenus/ContextMenuEntry';
 import { traverse } from '@/utils';
+import { RenderingHelper } from '@/canvas/RenderingHelper';
 
 const props = defineProps<{
     visible: boolean,
@@ -102,7 +102,10 @@ onMounted(() => {
     const renderer = new CanvasRenderer(canvas.value!, render);
     canvasRenderer.value = renderer;
     renderer.useObserveResize();
-    GlobalRenderers.CALLBACKS.push(() => render());
+    getWorkspace().rendering.registerCallback([
+        RenderingHelper.Keys.All,
+        RenderingHelper.Keys.NodesEditor
+    ], () => render());
 
     const gridColor = "#ffffff2f";
     const centerColor = "#ffffff7f";
@@ -259,7 +262,7 @@ function addNode(event: MouseEvent) {
                 getWorkspace().selectedNode = node;
                 selectedNodeRefForRendering.value = node;
                 getNodes().nodes.push(node);
-                GlobalRenderers.sendRedrawRequest();
+                getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
             },
         });
     });
@@ -318,7 +321,7 @@ function onPointerDown(event: PointerEvent) {
         getNodes().disconnect(linked.fromNode.getOutputPorts()[linked.fromPortIndex], linked.toNode.getInputPorts()[linked.toPortIndex]);
         targettingWire = undefined;
         wireCutterMode.value = false;
-        GlobalRenderers.sendRedrawRequest();
+        getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
         return;
     }
 
@@ -331,7 +334,7 @@ function onPointerDown(event: PointerEvent) {
         lastPortType = type;
         getNodes().nodes.splice(getNodes().nodes.indexOf(node), 1);
         getNodes().nodes.push(node);
-        GlobalRenderers.sendRedrawRequest();
+        getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
     });
 
     if (!nodeClicked) isMoving = true;
@@ -385,7 +388,7 @@ function onPointerMove(event: PointerEvent) {
     }
 
     if (shouldUpdate) {
-        GlobalRenderers.sendRedrawRequest();
+        getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
         wireCutterMode.value = !!targettingWire;
     }
 
@@ -404,7 +407,7 @@ function onPointerMove(event: PointerEvent) {
         lastNode.nodeY += event.movementY / zoomRatio.value;
     }
 
-    GlobalRenderers.sendRedrawRequest();
+    getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
 }
 function onPointerUp(event: PointerEvent) {
     isMoving = false;
@@ -419,7 +422,7 @@ function onPointerUp(event: PointerEvent) {
         lastPort = undefined;
         lastPortType = undefined;
         targettingPort = undefined;
-        GlobalRenderers.sendRedrawRequest();
+        getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
     }
 
     if (event.pointerType != "mouse") {
@@ -500,7 +503,7 @@ function deleteNode(node: INode<any, any>) {
             <input
                 class="node-name"
                 :value="selectedNodeRefForRendering? (selectedNodeRefForRendering.nodeName ?? selectedNodeRefForRendering.typeId) : 'Not selected'"
-                @input="getWorkspace().selectedNode? (getWorkspace().selectedNode!.nodeName = ($event.target as any).value) : 1; GlobalRenderers.sendRedrawRequest()"
+                @input="getWorkspace().selectedNode? (getWorkspace().selectedNode!.nodeName = ($event.target as any).value) : 1; getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
             >
             <div class="node-control-entry" v-for="control in (selectedNodeRefForRendering?.getControls() ?? [])">
                 <div class="node-control-label">{{ control.label }}</div>
@@ -512,7 +515,7 @@ function deleteNode(node: INode<any, any>) {
                 >
             </div>
             <div class="button delete"
-                @click="deleteNode(getWorkspace().selectedNode!); GlobalRenderers.sendRedrawRequest()"
+                @click="deleteNode(getWorkspace().selectedNode!); getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
                 v-if="selectedNodeRefForRendering"
             >Delete Node</div>
         </div>

@@ -141,6 +141,7 @@ function onEmptySpacePointer(event: PointerEvent) {
     .inner {
         position: relative;
         flex: 1 1 auto;
+        overflow: hidden;
 
         .seek-handle {
             position: absolute;

@@ -10,8 +10,8 @@ import { computed, ref, unref, type ComponentInternalInstance, toRaw, watch, nex
 import { NoteClipNode, type Clip, type PlaylistTrack } from '@mixery/engine';
 import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
-import { GlobalRenderers } from '@/canvas/GlobalRenderers';
 import { MixeryUI } from '@/handling/MixeryUI';
+import { RenderingHelper } from '@/canvas/RenderingHelper';
 
 const props = defineProps<{
     visible: boolean,
@@ -119,21 +119,30 @@ const toolContext: ToolContext = {
 function onCanvasMouseDown(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
     selectedTool.value.onMouseDown(toolContext, event.buttons, position, track);
-    GlobalRenderers.sendRedrawRequest();
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PatternsEditor,
+        RenderingHelper.Keys.SeekPointer
+    );
 }
 function onCanvasMouseMove(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
     selectedTool.value.onMouseMove(toolContext, event.buttons, position, track);
-    GlobalRenderers.sendRedrawRequest();
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PatternsEditor,
+        RenderingHelper.Keys.SeekPointer
+    );
 }
 function onCanvasMouseUp(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
     selectedTool.value.onMouseUp(toolContext, event.buttons, position, track);
-    GlobalRenderers.sendRedrawRequest();
+    getWorkspace().rendering.redrawRequest(
+        RenderingHelper.Keys.PatternsEditor,
+        RenderingHelper.Keys.SeekPointer
+    );
 }
 
-watch(scrollX, () => GlobalRenderers.sendRedrawRequest());
-watch(zoomX, () => GlobalRenderers.sendRedrawRequest());
+watch(scrollX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor));
+watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor));
 </script>
 
 <template>
