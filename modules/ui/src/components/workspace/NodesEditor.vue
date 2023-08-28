@@ -428,6 +428,27 @@ function onPointerUp(event: PointerEvent) {
     }
 }
 
+function onWheel(event: WheelEvent) {
+    const isTouchpad = Math.abs((event as any).wheelDeltaY) != 120 && event.deltaMode == 0;
+    let wheelX = event.deltaX;
+    let wheelY = event.deltaY * (isTouchpad? 1 : 0.5);
+
+    if (event.shiftKey) {
+        let aux = wheelX;
+        wheelX = wheelY;
+        wheelY = aux;
+    }
+
+    if (event.ctrlKey) {
+        let zoomDelta = event.shiftKey? wheelX : wheelY;
+        zoomRatio.value = Math.max(zoomRatio.value - zoomDelta / (isTouchpad? 50 : 200), 0.1);
+        event.preventDefault();
+    } else {
+        x.value -= wheelX / zoomRatio.value;
+        y.value -= wheelY / zoomRatio.value;
+    }
+}
+
 function deleteNode(node: INode<any, any>) {
     getNodes().connections.map(wire => {
         if (!(wire.from[0] == node.nodeId || wire.to[0] == node.nodeId)) return undefined;
@@ -462,6 +483,7 @@ function deleteNode(node: INode<any, any>) {
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
+            @wheel="onWheel"
             :class="{ wireCutterMode: wireCutterMode }"
         ></canvas>
         <div class="editor-controls">
