@@ -19,7 +19,7 @@ const props = defineProps<{
     user-select: none;
     cursor: pointer;
     border-radius: 6px;
-    transition: 0.1s background-color, 0.1s color;
+    transition: 0.1s background-color, 0.1s color, 0.2s box-shadow;
     margin: 0 1px;
 
     &:first-child {
@@ -45,6 +45,14 @@ const props = defineProps<{
 
         &.accent {
             color: var(--color-accent);
+        }
+    }
+
+    &.highlight {
+        box-shadow: inset 0 0 0 1.2px #9f9f9f;
+
+        &.accent {
+            box-shadow: inset 0 0 0 1.2px var(--color-accent);
         }
     }
 }
