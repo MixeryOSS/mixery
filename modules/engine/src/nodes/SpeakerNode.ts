@@ -1,9 +1,10 @@
-import { IPort, Identifier, SignalPort } from "../index.js";
-import { INode, NodeControl } from "./INode.js";
+import { GlobalRegistries, IPort, Identifier, SignalPort } from "../index.js";
+import { INode, NodeControl, NodeFactory } from "./INode.js";
 
 export class SpeakerNode implements INode<SpeakerNode, any> {
-    typeId: Identifier = "mixery:speaker";
-    nodeName?: string = "Speaker";
+    static readonly ID = "mixery:speaker";
+    typeId: Identifier = SpeakerNode.ID;
+    nodeName?: string = "Speaker Output";
     nodeX = 0;
     nodeY = 0;
     nodeWidth = 100;
@@ -35,4 +36,19 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
     saveNode() {
         return {}; // Return nothing
     }
+
+    static createFactory(): NodeFactory<SpeakerNode, any> {
+        return {
+            typeId: SpeakerNode.ID,
+            label: "Speaker Output",
+            createNew(workspace, nodeId) {
+                return new SpeakerNode(nodeId, workspace.audio);
+            },
+            createExisting(workspace, nodeId, data) {
+                return new SpeakerNode(nodeId, workspace.audio);
+            }
+        };
+    }
 }
+
+GlobalRegistries.NODE_FACTORIES.register(SpeakerNode.ID, SpeakerNode.createFactory());

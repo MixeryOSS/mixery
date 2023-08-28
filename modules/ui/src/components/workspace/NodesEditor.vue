@@ -4,21 +4,35 @@ import TitlebarButton from '../windows/TitlebarButton.vue';
 import MixeryIcon from '../icons/MixeryIcon.vue';
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
-import { useTrackableXY } from '../composes';
+import { useTrackableXY, useParentState } from '../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { GlobalRenderers } from '@/canvas/GlobalRenderers';
 import { NoteClipNode, type IPort, type INode, type PortsConnection } from '@mixery/engine';
+import type { ContextMenuEntry } from '../contextmenus/ContextMenuEntry';
+import { traverse } from '@/utils';
 
 const props = defineProps<{
     visible: boolean,
     workspaceId: string,
+    contextMenu?: ContextMenuEntry[],
+    contextMenuX: number,
+    contextMenuY: number
 }>();
-const emits = defineEmits(["update:visible"]);
+const emits = defineEmits([
+    "update:visible",
+    "update:contextMenu",
+    "update:contextMenuX",
+    "update:contextMenuY"
+]);
 const grid = ref(50); // 50px grid size
 const x = ref(0);
 const y = ref(0);
 const zoomRatio = ref(1);
 const wireCutterMode = ref(false);
+
+const contextMenu = useParentState<ContextMenuEntry[] | undefined>("contextMenu", props, emits);
+const contextMenuX = useParentState<number>("contextMenuX", props, emits);
+const contextMenuY = useParentState<number>("contextMenuY", props, emits);
 
 const canvas = ref<HTMLCanvasElement>();
 const canvasRenderer = ref<CanvasRenderer>();
@@ -230,12 +244,27 @@ onMounted(() => {
     watch(zoomRatio, render);
 });
 
-function addNode() {
-    let node = new NoteClipNode(Math.random().toString()); // TODO replace with random string
-    node.nodeX = 100;
-    node.nodeY = 25;
-    getNodes().nodes.push(node);
-    GlobalRenderers.sendRedrawRequest();
+function addNode(event: MouseEvent) {
+    const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
+    const workspaceBox = workspaceUI?.getBoundingClientRect();
+    contextMenuX.value = event.pageX - (workspaceBox?.x ?? 0);
+    contextMenuY.value = event.pageY - (workspaceBox?.y ?? 0);
+    const entries: ContextMenuEntry[] = [];
+    getWorkspace().workspace.registries.nodeFactories.forEach((id, factory) => {
+        entries.push({
+            label: factory.label,
+            onClick() {
+                const node = factory.createNew(getWorkspace().workspace, getNodes().generateNodeId()) as INode<any, any>;
+                node.nodeX = -x.value - node.nodeWidth / 2;
+                node.nodeY = -y.value;
+                getWorkspace().selectedNode = node;
+                selectedNodeRefForRendering.value = node;
+                getNodes().nodes.push(node);
+                GlobalRenderers.sendRedrawRequest();
+            },
+        });
+    });
+    contextMenu.value = entries;
 }
 
 function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort<any>, portType?: "input" | "output") => any) {

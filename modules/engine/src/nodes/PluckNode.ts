@@ -1,12 +1,13 @@
-import { IPort, Identifier, MidiPort, SignalPort, Temperaments } from "../index.js";
-import { INode, NodeControl } from "./INode.js";
+import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort, Temperaments } from "../index.js";
+import { INode, NodeControl, NodeFactory } from "./INode.js";
 
 interface PluckNodeData {
     duration: number;
 }
 
 export class PluckNode implements INode<PluckNode, any> {
-    typeId: Identifier = "mixery:pluck";
+    static readonly ID = "mixery:pluck";
+    typeId: Identifier = PluckNode.ID;
     nodeName?: string = "Pluck";
     nodeX = 0;
     nodeY = 0;
@@ -78,4 +79,21 @@ export class PluckNode implements INode<PluckNode, any> {
     saveNode() {
         return structuredClone(this.data);
     }
+
+    static createFactory(): NodeFactory<PluckNode, PluckNodeData> {
+        return {
+            typeId: PluckNode.ID,
+            label: "Pluck",
+            createNew(workspace, nodeId) {
+                return new PluckNode(nodeId, workspace.audio);
+            },
+            createExisting(workspace, nodeId, data) {
+                const node = new PluckNode(nodeId, workspace.audio);
+                node.data = data;
+                return node;
+            }
+        };
+    }
 }
+
+GlobalRegistries.NODE_FACTORIES.register(PluckNode.ID, PluckNode.createFactory());

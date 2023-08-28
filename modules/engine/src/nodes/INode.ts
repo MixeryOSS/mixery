@@ -60,6 +60,7 @@ export type NodeFromDataFactory<T extends INode<T, TData>, TData> = (
  */
 export interface NodeFactory<T extends INode<T, TData>, TData> {
     readonly typeId: Identifier;
+    readonly label: string;
     createNew: NewNodeFactory<T, TData>;
     createExisting: NodeFromDataFactory<T, TData>;
 }

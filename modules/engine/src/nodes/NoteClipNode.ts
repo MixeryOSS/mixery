@@ -8,13 +8,13 @@ interface NoteClipNodeData {
 export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
     static readonly ID = "mixery:note_clip";
     typeId: Identifier = NoteClipNode.ID;
-    nodeName?: string = "MIDI";
+    nodeName?: string = "Notes Clip Input";
     nodeX = 0;
     nodeY = 0;
     nodeWidth = 100;
 
     data: NoteClipNodeData = {
-        channelName: "default"
+        channelName: "Default Channel"
     };
 
     controls: NodeControl<any>[] = [];
@@ -54,11 +54,12 @@ export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
     static createFactory(): NodeFactory<NoteClipNode, NoteClipNodeData> {
         return {
             typeId: NoteClipNode.ID,
+            label: "Notes Clip Input",
             createNew(workspace, nodeId) {
                 return new NoteClipNode(nodeId);
             },
             createExisting(workspace, nodeId, data) {
-                let node = new NoteClipNode(nodeId);
+                const node = new NoteClipNode(nodeId);
                 node.data = structuredClone(data);
                 return node;
             }

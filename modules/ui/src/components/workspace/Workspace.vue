@@ -9,14 +9,20 @@ import PatternEditor from "./PatternEditor.vue";
 import ExplorerEntry from "../workspace/explorer/ExplorerEntry.vue";
 import NodesEditor from "./NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
+import ContextMenu from "../contextmenus/ContextMenu.vue";
 
 import * as engine from "@mixery/engine";
 import { onMounted, ref, watch } from "vue";
 import { GlobalRenderers } from "@/canvas/GlobalRenderers";
+import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 
 const props = defineProps<{
     workspaceId: string
 }>();
+
+const contextMenu = ref<ContextMenuEntry[]>();
+const contextMenuX = ref(0);
+const contextMenuY = ref(0);
 
 // TODO: sync BPM and time to project
 const bpm = ref(120);
@@ -56,12 +62,29 @@ watch(sharedSeekPointer, () => GlobalRenderers.sendRedrawRequest());
                 <ExplorerEntry>EZ</ExplorerEntry>
             </ExplorerPane>
             <WindowsContainer class="wcontainer">
-                <PatternEditor v-model:visible="patternEditorVisible" :workspace-id="props.workspaceId" v-model:seek-pointer="sharedSeekPointer"></PatternEditor>
-                <PianoRoll v-model:visible="pianoRollVisible" :workspace-id="props.workspaceId" v-model:seek-pointer="sharedSeekPointer" />
-                <NodesEditor v-model:visible="nodesEditorVisible" :workspace-id="props.workspaceId" />
+                <PatternEditor
+                    v-model:visible="patternEditorVisible"
+                    :workspace-id="props.workspaceId"
+                    v-model:seek-pointer="sharedSeekPointer" />
+                <PianoRoll
+                    v-model:visible="pianoRollVisible"
+                    :workspace-id="props.workspaceId"
+                    v-model:seek-pointer="sharedSeekPointer" />
+                <NodesEditor
+                    v-model:visible="nodesEditorVisible"
+                    :workspace-id="props.workspaceId"
+                    v-model:context-menu="contextMenu"
+                    v-model:context-menu-x="contextMenuX"
+                    v-model:context-menu-y="contextMenuY" />
                 <SettingsWindow :workspace-id="props.workspaceId" :visible="false" />
             </WindowsContainer>
         </div>
+        <ContextMenu
+            :x="contextMenuX"
+            :y="contextMenuY"
+            :menu="contextMenu"
+            @close-menu="contextMenu = undefined"
+            v-if="contextMenu" />
     </div>
 </template>
 

@@ -1,4 +1,5 @@
-import { type Ref } from "vue";
+import { computed, ref, type Ref } from "vue";
+import type { ContextMenuEntry } from "./contextmenus/ContextMenuEntry";
 
 export interface UseTrackableXYOptions {
     scale?: number;
@@ -43,4 +44,15 @@ export function useTrackableXY(elem: HTMLElement, x?: Ref<number>, y?: Ref<numbe
             });
         });
     }
+}
+
+export function useParentState<T>(
+    key: string,
+    props: { [x: string]: any },
+    emits: (event: any, value: T) => any
+) {
+    return computed<T>({
+        get() { return props[key]; },
+        set(v) { emits("update:" + key, v); }
+    });
 }

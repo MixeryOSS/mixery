@@ -49,7 +49,6 @@ export namespace MixeryUI {
 
         // Initialize default nodes network
         const midiInputNode = new NoteClipNode(project.nodes.generateNodeId());
-        midiInputNode.nodeName = "MIDI";
         midiInputNode.data.channelName = "Default Channel";
 
         const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
