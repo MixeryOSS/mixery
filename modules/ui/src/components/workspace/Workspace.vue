@@ -11,9 +11,7 @@ import NodesEditor from "./NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
 
-import * as engine from "@mixery/engine";
-import { onMounted, ref, watch } from "vue";
-import { GlobalRenderers } from "@/canvas/GlobalRenderers";
+import { ref, watch } from "vue";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
@@ -58,6 +56,11 @@ function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
 function openUrl(url: string) {
     window.open(url);
 }
+
+document.fonts.ready.then(() => {
+    console.log("Fonts loaded, redrawing...");
+    MixeryUI.workspaces.get(props.workspaceId)!.rendering.redrawRequest(RenderingHelper.Keys.All);
+});
 </script>
 
 <template>

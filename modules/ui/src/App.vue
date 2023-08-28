@@ -4,7 +4,7 @@ import { MixeryUI } from "./handling/MixeryUI";
 </script>
 
 <template>
-    <Workspace class="workspace" :workspace-id="MixeryUI.defaultWorkspace.id"></Workspace>
+    <Workspace class="workspace" :workspace-id="MixeryUI.defaultWorkspace.id" />
 </template>
 
 <style scoped lang="scss">
