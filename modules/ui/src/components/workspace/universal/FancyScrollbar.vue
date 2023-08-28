@@ -4,6 +4,7 @@
 -->
 <script setup lang="ts">
 import { useTrackableXY } from '@/components/composes';
+import { Units } from '@mixery/engine';
 import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -12,7 +13,8 @@ const props = defineProps<{
     scrollX: number,
     zoomX: number,
     unitsCount: number,
-    seek: number
+    seek: number,
+    bpm: number
 }>();
 const emits = defineEmits(["update:leftbarWidth", "update:scrollbarHeight", "update:scrollX", "update:zoomX", "update:seek"]);
 
@@ -33,8 +35,8 @@ const zoomX = computed({
     set(v) { emits("update:zoomX", v); }
 });
 const seek = computed({
-    get() { return props.seek; },
-    set(v) { emits("update:seek", v); }
+    get() { return Units.msToUnits(props.bpm, props.seek); },
+    set(v) { emits("update:seek", Units.unitsToMs(props.bpm, v)); }
 });
 const seekPixel = computed({
     get() { return (seek.value - scrollX.value) * zoomX.value / 96; },

@@ -17,6 +17,7 @@ const props = defineProps<{
     visible: boolean,
     workspaceId: string,
     seekPointer: number,
+    reactiveBpm: number
 }>();
 const emits = defineEmits(["update:visible", "clip-select", "update:seekPointer"]);
 
@@ -171,6 +172,7 @@ watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.P
                 v-model:seek="seekPointer"
                 :scrollbar-height="40"
                 :units-count="96 * 4 * 16 /** Use maximum width */"
+                :bpm="props.reactiveBpm"
             />
             <div class="tracks">
                 <template v-for="(track, index) in getProject().playlist.tracks">

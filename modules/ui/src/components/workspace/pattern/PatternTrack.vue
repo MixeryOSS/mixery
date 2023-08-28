@@ -2,7 +2,7 @@
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { MixeryUI } from '@/handling/MixeryUI';
-import type { ClippedNote, PlaylistTrack } from '@mixery/engine';
+import { Units, type ClippedNote, type PlaylistTrack } from '@mixery/engine';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -55,7 +55,7 @@ onMounted(() => {
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
         const beatsPerScreen = Math.ceil(canvas.value!.offsetWidth / props.zoomX) + 1;
         const firstBeatOffset = props.scrollX % 96;
-        const seekX = (props.seekPointer - props.scrollX) * props.zoomX / 96;
+        const seekX = (Units.msToUnits(getWorkspace().project.bpm, props.seekPointer) - props.scrollX) * props.zoomX / 96;
 
         renderer.fillRect(seekX - 1, 0, 2, canvas.value!.offsetHeight, accent);
 

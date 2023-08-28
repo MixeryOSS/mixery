@@ -4,7 +4,7 @@ import TitlebarButton from '../windows/TitlebarButton.vue';
 import WindowToolsbar from '../windows/WindowToolsbar.vue';
 import MixeryIcon from '../icons/MixeryIcon.vue';
 import FancyScrollbar from './universal/FancyScrollbar.vue';
-import type { ClippedNote, NotesClip } from '@mixery/engine';
+import { Units, type ClippedNote, type NotesClip } from '@mixery/engine';
 import { computed, onMounted, ref, watch, type ShallowRef, render } from 'vue';
 import { CanvasRenderer } from '../../canvas/CanvasRenderer';
 import { MidiText } from '../MidiText';
@@ -19,6 +19,7 @@ const props = defineProps<{
     visible: boolean,
     workspaceId: string,
     seekPointer: number,
+    reactiveBpm: number
 }>();
 const emits = defineEmits(["update:visible", "update:seekPointer"]);
 
@@ -121,7 +122,7 @@ onMounted(() => {
         const firstBeatOffset = scrollX.value % 96;
         const renderVelocityBar = zoomY.value >= 20;
         const renderNoteName = zoomY.value >= 14;
-        const seekX = (seekPointer.value - scrollX.value) * zoomX.value / 96;
+        const seekX = (Units.msToUnits(props.reactiveBpm, seekPointer.value) - scrollX.value) * zoomX.value / 96;
         const endOfClipX = (getSelectedClip().durationUnit - scrollX.value) * zoomX.value / 96;
 
         renderer.fillRect(pianoWidth.value + seekX, 0, 2, canvas.value!.offsetHeight, accent);
@@ -374,6 +375,7 @@ function onCanvasMouseUp(event: PointerEvent) {
                 v-model:scrollbar-height="scrollbarHeight"
                 v-model:seek="seekPointer"
                 :units-count="clipDuration"
+                :bpm="props.reactiveBpm"
             />
             <div class="canvas-container">
                 <canvas class="canvas" ref="canvas"

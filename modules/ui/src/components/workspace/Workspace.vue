@@ -11,7 +11,7 @@ import NodesEditor from "./NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
 
-import { computed, ref, watch } from "vue";
+import { computed, ref, triggerRef, watch } from "vue";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
@@ -23,29 +23,36 @@ const props = defineProps<{
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
 
-function sliders$changeBpm(bpm: number) {
-    const ws = getWorkspace();
-    if (ws.player.isPlaying) return; // Can't change BPM while playing
-    ws.project.bpm = bpm;
-}
-
 const root = ref<HTMLDivElement>();
 const contextMenu = ref<ContextMenuEntry[]>();
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
 // TODO: sync BPM and time to project
+const reactiveBpm = ref(getWorkspace().project.bpm);
 const time = ref(0);
-const sharedSeekPointer = ref(0);
+const sharedSeekPointer = computed(() => !getWorkspace().player.isPlaying? time.value : getWorkspace().player.currentMs);
+
+function sliders$changeBpm(bpm: number) {
+    const ws = getWorkspace();
+    if (ws.player.isPlaying) return; // Can't change BPM while playing
+    ws.project.bpm = bpm;
+    reactiveBpm.value = bpm;
+    triggerRef(sharedSeekPointer);
+}
+function sliders$changeTime(ms: number) {
+    const ws = getWorkspace();
+    if (ws.player.isPlaying) return; // TODO stop, seek and then play
+    time.value = ms;
+}
 
 const pianoRollVisible = ref(true);
 const patternEditorVisible = ref(true);
 const nodesEditorVisible = ref(true);
 const settingsWindowVisible = ref(false);
 
-watch(sharedSeekPointer, () => getWorkspace().rendering.redrawRequest(
-    RenderingHelper.Keys.SeekPointer
-));
+watch(reactiveBpm, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.SeekPointer));
+watch(sharedSeekPointer, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.SeekPointer));
 
 function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
     const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button"), v => v.parentElement);
@@ -106,14 +113,20 @@ document.fonts.ready.then(() => {
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"
-                :model-value="getWorkspace().project.bpm"
-                @update:model-value="sliders$changeBpm($event); $forceUpdate()"
+                :model-value="reactiveBpm"
+                @update:model-value="sliders$changeBpm"
                 :min=10 :max=1000
             />
             <div class="separator"></div>
             <WorkspaceToolsbarButton is-icon><MixeryIcon type="play" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
-            <Digital1DSlider name="Time" display-mode="time" v-model="time" :min=0 />
+            <Digital1DSlider
+                name="Time"
+                display-mode="time"
+                :model-value="time"
+                @update:model-value="sliders$changeTime"
+                :min=0
+            />
             <div class="separator"></div>
             <WorkspaceToolsbarButton @pointerdown="patternEditorVisible = !patternEditorVisible" :highlight="patternEditorVisible" is-icon><MixeryIcon type="pattern" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton @pointerdown="pianoRollVisible = !pianoRollVisible" :highlight="pianoRollVisible" is-icon><MixeryIcon type="piano" /></WorkspaceToolsbarButton>
@@ -132,11 +145,17 @@ document.fonts.ready.then(() => {
                 <PatternEditor
                     v-model:visible="patternEditorVisible"
                     :workspace-id="props.workspaceId"
-                    v-model:seek-pointer="sharedSeekPointer" />
+                    :seek-pointer="sharedSeekPointer"
+                    @update:seek-pointer="sliders$changeTime($event)"
+                    :reactive-bpm="reactiveBpm"
+                />
                 <PianoRoll
                     v-model:visible="pianoRollVisible"
                     :workspace-id="props.workspaceId"
-                    v-model:seek-pointer="sharedSeekPointer" />
+                    :seek-pointer="sharedSeekPointer"
+                    @update:seek-pointer="sliders$changeTime($event)"
+                    :reactive-bpm="reactiveBpm"
+                />
                 <NodesEditor
                     v-model:visible="nodesEditorVisible"
                     :workspace-id="props.workspaceId"
