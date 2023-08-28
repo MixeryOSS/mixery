@@ -28,22 +28,29 @@ const contextMenu = ref<ContextMenuEntry[]>();
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
-// TODO: sync BPM and time to project
+const updateThing = ref(0); // Dirty way to update
 const reactiveBpm = ref(getWorkspace().project.bpm);
-const time = ref(0);
-const sharedSeekPointer = computed(() => !getWorkspace().player.isPlaying? time.value : getWorkspace().player.currentMs);
+const startTime = ref(0);
+const sharedSeekPointer = computed(() => {
+    updateThing.value;
+    return getWorkspace().player.isPlaying? getWorkspace().player.currentMs : startTime.value;
+});
+const isPlaying = computed(() => {
+    updateThing.value;
+    return getWorkspace().player.isPlaying;
+});
 
 function sliders$changeBpm(bpm: number) {
     const ws = getWorkspace();
     if (ws.player.isPlaying) return; // Can't change BPM while playing
     ws.project.bpm = bpm;
     reactiveBpm.value = bpm;
-    triggerRef(sharedSeekPointer);
 }
+
 function sliders$changeTime(ms: number) {
     const ws = getWorkspace();
     if (ws.player.isPlaying) return; // TODO stop, seek and then play
-    time.value = ms;
+    startTime.value = ms;
 }
 
 const pianoRollVisible = ref(true);
@@ -69,6 +76,31 @@ function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
 
 function openUrl(url: string) {
     window.open(url);
+}
+
+async function playButton() {
+    const player = getWorkspace().player;
+    if (player.isPlaying) {
+        startTime.value = player.currentMs;
+        player.stop();
+    } else {
+        await player.play(startTime.value, () => {
+            updateThing.value++;
+        });
+    }
+
+    updateThing.value++;
+}
+
+async function stopButton() {
+    const player = getWorkspace().player;
+    if (player.isPlaying) {
+        player.stop();
+        updateThing.value++;
+        triggerRef(isPlaying);
+    } else {
+        startTime.value = 0;
+    }
 }
 
 document.fonts.ready.then(() => {
@@ -118,12 +150,12 @@ document.fonts.ready.then(() => {
                 :min=10 :max=1000
             />
             <div class="separator"></div>
-            <WorkspaceToolsbarButton is-icon><MixeryIcon type="play" /></WorkspaceToolsbarButton>
-            <WorkspaceToolsbarButton is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton :highlight="isPlaying" @click="playButton" is-icon><MixeryIcon :type="isPlaying? 'pause' : 'play'" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton @click="stopButton" is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="Time"
                 display-mode="time"
-                :model-value="time"
+                :model-value="sharedSeekPointer"
                 @update:model-value="sliders$changeTime"
                 :min=0
             />

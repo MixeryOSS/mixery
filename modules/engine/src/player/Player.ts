@@ -4,7 +4,11 @@ import { Units } from "../misc/Units.js";
 export class Player {
     playTimestampSec: number = -1;
     startAtMs: number = 0;
-    quality: number = 96;
+
+    /**
+     * Higher == more precise.
+     */
+    quality: number = 100;
 
     constructor(
         public readonly project: Project
@@ -116,7 +120,7 @@ export class Player {
         });
     }
 
-    async play(playAtMs: number = this.startAtMs) {
+    async play(playAtMs: number = this.startAtMs, loopCallback?: () => any) {
         if (this.isPlaying) return;
         this.startAtMs = playAtMs;
         this.playTimestampSec = this.audioContext.currentTime;
@@ -125,6 +129,7 @@ export class Player {
         this.loop();
         this.loopingTask = setInterval(() => {
             this.loop();
+            if (loopCallback) loopCallback();
         }, 1000 / this.quality);
     }
 
@@ -150,7 +155,7 @@ export class Player {
 
     async seek(playAtMs: number) {
         this.pause();
-        this.play(playAtMs);
+        await this.play(playAtMs);
     }
 }
 
