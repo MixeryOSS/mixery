@@ -533,7 +533,9 @@ canvas {
     }
 
     &.wireCutterMode {
-        cursor: not-allowed;
+        cursor:
+            url(../../assets/cursors/scissor.svg) 17.5 17.5,
+            not-allowed;
     }
 }
 
