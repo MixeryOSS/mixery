@@ -13,6 +13,7 @@ const props = defineProps<{
     workspaceId: string,
     visible: boolean
 }>();
+const emits = defineEmits(["update:visible"]);
 
 const settings = ref(MixeryUI.workspaces.get(props.workspaceId)!.settings);
 
@@ -25,11 +26,11 @@ function updateAccentColor() {
 <template>
     <MixeryWindow title="Settings" :width="300" :height="500" :visible="props.visible" resizable>
         <template v-slot:title-right>
-            <TitlebarButton is-icon><MixeryIcon type="close" /></TitlebarButton>
+            <TitlebarButton is-icon @click="emits('update:visible', !props.visible)"><MixeryIcon type="close" /></TitlebarButton>
         </template>
         <div class="entry">
             <div class="label">Detailed Rendering</div>
-            <Switch v-model="settings.fancyRendering" />
+            <Switch v-model="settings.fancyRendering" @on-update="GlobalRenderers.sendRedrawRequest()" />
         </div>
         <div class="entry" @pointerup="updateAccentColor" @pointermove="updateAccentColor">
             <div class="label">Accent Color</div>

@@ -15,11 +15,13 @@ import * as engine from "@mixery/engine";
 import { onMounted, ref, watch } from "vue";
 import { GlobalRenderers } from "@/canvas/GlobalRenderers";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
+import { traverse } from "@/utils";
 
 const props = defineProps<{
     workspaceId: string
 }>();
 
+const root = ref<HTMLDivElement>();
 const contextMenu = ref<ContextMenuEntry[]>();
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
@@ -32,16 +34,59 @@ const sharedSeekPointer = ref(0);
 const pianoRollVisible = ref(true);
 const patternEditorVisible = ref(true);
 const nodesEditorVisible = ref(true);
+const settingsWindowVisible = ref(false);
 
 watch(sharedSeekPointer, () => GlobalRenderers.sendRedrawRequest());
+
+function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
+    const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button"), v => v.parentElement);
+
+    if (traversed) {
+        const box = traversed.getBoundingClientRect();
+        const rootBox = root.value!.getBoundingClientRect();
+        contextMenuX.value = box.left - rootBox.left;
+        contextMenuY.value = box.top - rootBox.top + box.height;
+    }
+
+    contextMenu.value = menu;
+}
+
+function openUrl(url: string) {
+    window.open(url);
+}
 </script>
 
 <template>
-    <div class="workspace">
+    <div class="workspace" ref="root">
         <div class="toolsbar">
-            <WorkspaceToolsbarButton is-icon accent><MixeryIcon type="mixery" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton
+                is-icon accent
+                @click="openToolsbarContextMenu($event, [
+                    {
+                        label: 'Settings',
+                        // @ts-ignore
+                        onClick() { settingsWindowVisible = true; }
+                    }
+                ])"
+            ><MixeryIcon type="mixery" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton>File</WorkspaceToolsbarButton>
-            <WorkspaceToolsbarButton>Help</WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton
+                @click="openToolsbarContextMenu($event, [
+                    {
+                        label: 'Issues Tracker',
+                        onClick() { openUrl('https://github.com/MixeryOSS/issues-tracker/issues'); },
+                    },
+                    {
+                        label: 'Source Code',
+                        onClick() { openUrl('https://github.com/MixeryOSS'); },
+                    },
+                    {
+                        label: 'About'
+                    }
+                ])"
+            >
+                Help
+            </WorkspaceToolsbarButton>
             <div class="separator"></div>
             <Digital1DSlider name="BPM" display-mode="decimal" v-model="bpm" :min=10 :max=1000 />
             <Digital1DSlider name="Time" display-mode="time" v-model="time" :min=0 />
@@ -76,7 +121,7 @@ watch(sharedSeekPointer, () => GlobalRenderers.sendRedrawRequest());
                     v-model:context-menu="contextMenu"
                     v-model:context-menu-x="contextMenuX"
                     v-model:context-menu-y="contextMenuY" />
-                <SettingsWindow :workspace-id="props.workspaceId" :visible="false" />
+                <SettingsWindow :workspace-id="props.workspaceId" v-model:visible="settingsWindowVisible" />
             </WindowsContainer>
         </div>
         <ContextMenu
