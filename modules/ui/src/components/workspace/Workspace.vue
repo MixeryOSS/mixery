@@ -16,6 +16,7 @@ import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
 import { RenderingHelper } from "@/canvas/RenderingHelper";
+import { Units } from "@mixery/engine";
 
 const props = defineProps<{
     workspaceId: string
@@ -113,6 +114,26 @@ async function stopButton() {
     }
 }
 
+const metronomeButton = ref<InstanceType<typeof WorkspaceToolsbarButton>>();
+function flashMetronomeButton() {
+    if (!metronomeButton.value) return;
+    (metronomeButton.value.$el as HTMLElement).animate([
+        {
+            backgroundColor: "var(--color-accent)",
+            boxShadow: "inset 0 0 0 4px var(--color-accent)"
+        },
+        {}
+    ], {
+        duration: Units.unitsToMs(getWorkspace().project.bpm, 96 / 4 * 3),
+        iterations: 1
+    });
+}
+
+getWorkspace().workspace.metronome.node?.midiIn.onNoteEvent.listen(note => {
+    if (note.signalType == "instant") flashMetronomeButton();
+    else if (note.signalType == "delayed") setTimeout(() => flashMetronomeButton(), note.delayMs);
+});
+
 document.fonts.ready.then(() => {
     console.log("Fonts loaded, redrawing...");
     getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.All);
@@ -151,7 +172,7 @@ document.fonts.ready.then(() => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <WorkspaceToolsbarButton :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"
