@@ -108,6 +108,7 @@ onMounted(() => {
     const noteHg = ["#ffffff", "#3f3f3f"];
 
     function render() {
+        if (!props.visible) return;
         if (!canvas.value) return;
         renderer.startRender();
         clipDuration.value = getSelectedClip().durationUnit;
@@ -195,12 +196,6 @@ onMounted(() => {
         });
     }
 
-    watch(scrollX, render);
-    watch(scrollY, render);
-    watch(zoomX, render);
-    watch(zoomY, render);
-    watch(pianoWidth, render);
-
     const computedScrollX = computed({
         get() { return scrollX.value / 96 * zoomX.value; },
         set(v) { scrollX.value = v * 96 / zoomX.value; }
@@ -266,6 +261,12 @@ onMounted(() => {
         ctrlScale: 1
     });
 });
+
+watch(scrollX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+watch(scrollY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+watch(zoomY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+watch(pianoWidth, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 
 function onScroll(event: WheelEvent) {
     event.preventDefault();

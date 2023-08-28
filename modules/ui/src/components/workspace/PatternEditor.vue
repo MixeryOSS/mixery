@@ -176,6 +176,7 @@ watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.P
                 <template v-for="(track, index) in getProject().playlist.tracks">
                     <PatternTrack
                         :workspace-id="props.workspaceId"
+                        :editor-visible="props.visible"
                         :track-index="index"
                         :track-label-width="trackLabelWidth - 41"
                         :seek-pointer="seekPointer"

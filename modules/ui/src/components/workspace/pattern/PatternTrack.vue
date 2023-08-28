@@ -6,6 +6,7 @@ import type { ClippedNote, PlaylistTrack } from '@mixery/engine';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
+    editorVisible: boolean,
     workspaceId: string,
     trackIndex: number,
     scrollX: number,
@@ -29,7 +30,6 @@ const scrollX = computed({
     get() { return props.scrollX; },
     set(v) { emits("update:scrollX", v); }
 });
-const seekPointer = computed(() => props.seekPointer);
 
 const canvas = ref<HTMLCanvasElement>();
 const canvasRenderer = ref<CanvasRenderer>();
@@ -49,6 +49,7 @@ onMounted(() => {
     const selectedOutline = "#ffffff";
 
     function render() {
+        if (!props.editorVisible) return;
         if (!canvas.value) return;
         renderer.startRender();
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");

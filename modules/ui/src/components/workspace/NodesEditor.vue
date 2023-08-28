@@ -111,6 +111,7 @@ onMounted(() => {
     const centerColor = "#ffffff7f";
 
     function render() {
+        if (!props.visible) return;
         if (!canvas.value) return;
         renderer.startRender();
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
@@ -240,11 +241,11 @@ onMounted(() => {
         minX: 0.1,
         maxX: 10
     });
-
-    watch(x, render);
-    watch(y, render);
-    watch(zoomRatio, render);
 });
+
+watch(x, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+watch(y, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+watch(zoomRatio, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 
 function addNode(event: MouseEvent) {
     const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
