@@ -1,5 +1,6 @@
 import { GlobalRegistries, IReadonlyRegistry, TransitiveRegistry } from "../misc/Registries.js";
 import { NodeFactory } from "../nodes/INode.js";
+import { Metronome } from "./Metronome.js";
 
 /**
  * Mixery workspace.
@@ -15,7 +16,11 @@ export class Workspace {
         nodeFactories: new TransitiveRegistry(GlobalRegistries.NODE_FACTORIES)
     };
 
-    constructor(public readonly audio: BaseAudioContext) {}
+    metronome: Metronome;
+
+    constructor(public readonly audio: BaseAudioContext) {
+        this.metronome = new Metronome(this);
+    }
 }
 
 export interface WorkspaceRegistries {

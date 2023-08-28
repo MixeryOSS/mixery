@@ -118,6 +118,9 @@ export class Player {
                 this.playing.delete(playing);
             }
         });
+
+        // Metronome
+        this.project.workspace.metronome.placeTicks(this.project.bpm, this.currentMs);
     }
 
     async play(playAtMs: number = this.startAtMs, loopCallback?: () => any) {
@@ -140,6 +143,7 @@ export class Player {
         this.scheduled.clear();
         this.playing.forEach(playing => playing.stop());
         this.playing.clear();
+        this.project.workspace.metronome.clear();
 
         this.playTimestampSec = -1;
         clearInterval(this.loopingTask);

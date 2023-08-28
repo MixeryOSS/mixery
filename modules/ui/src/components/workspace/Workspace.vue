@@ -39,6 +39,16 @@ const isPlaying = computed(() => {
     updateThing.value;
     return getWorkspace().player.isPlaying;
 });
+const metronome = computed({
+    get() {
+        updateThing.value;
+        return getWorkspace().workspace.metronome.enabled;
+    },
+    set(v) {
+        updateThing.value++;
+        getWorkspace().workspace.metronome.enabled = v;
+    }
+});
 
 function sliders$changeBpm(bpm: number) {
     const ws = getWorkspace();
@@ -141,7 +151,7 @@ document.fonts.ready.then(() => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <WorkspaceToolsbarButton is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"

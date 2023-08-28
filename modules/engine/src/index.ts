@@ -23,5 +23,6 @@ export * from "./player/Player.js";
 export * from "./playlist/Clip.js";
 export * from "./playlist/Playlist.js";
 
-export * from "./workspace/Workspace.js";
+export * from "./workspace/Metronome.js";
 export * from "./workspace/Project.js";
+export * from "./workspace/Workspace.js";
