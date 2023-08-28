@@ -29,6 +29,39 @@ const props = defineProps<{
         <path d="M5 12.5H12.5M12.5 12.5V5M12.5 12.5H20M12.5 12.5V20" stroke="currentColor" stroke-linecap="round"/>
     </svg>
 
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'metronome-left'">
+        <path d="M15 5H10L8 20H17L15 5Z" stroke="currentColor" stroke-linejoin="round"/>
+        <path d="M12.5 7V14" stroke="currentColor" stroke-linecap="currentColor"/>
+        <path d="M5.35355 9.95644L12.4246 17.0275" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M6.06065 9.95644L5.35355 10.6636L6.06065 11.3707H6.76776V10.6636L6.06065 9.95644Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12.5" cy="17" r="1" fill="currentColor"/>
+    </svg>
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'metronome-middle'">
+        <path d="M15 5H10L8 20H17L15 5Z" stroke="currentColor" stroke-linejoin="round"/>
+        <path d="M12.5 7V14" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M12.5 7L12.5 17" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M12 7.5H13V8.5L12.5 9L12 8.5V7.5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12.5" cy="17" r="1" fill="currentColor"/>
+    </svg>
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'metronome-right'">
+        <path d="M15 5H10L8 20H17L15 5Z" stroke="currentColor" stroke-linejoin="round"/>
+        <path d="M12.5 7V14" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M19.6465 9.95644L12.5754 17.0275" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M18.9393 9.95644L19.6465 10.6636L18.9393 11.3707H18.2322V10.6636L18.9393 9.95644Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12.5" cy="17" r="1" fill="currentColor"/>
+    </svg>
+
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'play'">
+        <path d="M17.0781 11.7318L10.6402 5.23176C9.98886 4.68899 9 5.15214 9 5.99998V19C9 19.8479 9.98886 20.311 10.6402 19.7682L17.0781 13.2682C17.5579 12.8684 17.5579 12.1316 17.0781 11.7318Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'pause'">
+        <path d="M9 5V20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16 5V20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+        <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'stop'">
+        <path d="M18 5H7C5.89543 5 5 5.89543 5 7V18C5 19.1046 5.89543 20 7 20H18C19.1046 20 20 19.1046 20 18V7C20 5.89543 19.1046 5 18 5Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+
     <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25" fill="none" v-if="props.type == 'piano'">
         <path d="M17 11.5V5H18C19.6 5 20 6.33333 20 7V18C20 19.6 18.6667 20 18 20H15.5V13C16.7 13 17 12 17 11.5Z" stroke="currentColor" stroke-linejoin="round"/>
         <path d="M8 11.5V5H11V11.5C11 12 10.7 13 9.5 13C8.3 13 8 12 8 11.5Z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"/>

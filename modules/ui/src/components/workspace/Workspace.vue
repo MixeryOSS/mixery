@@ -11,7 +11,7 @@ import NodesEditor from "./NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
 
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
@@ -21,13 +21,20 @@ const props = defineProps<{
     workspaceId: string
 }>();
 
+function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
+
+function sliders$changeBpm(bpm: number) {
+    const ws = getWorkspace();
+    if (ws.player.isPlaying) return; // Can't change BPM while playing
+    ws.project.bpm = bpm;
+}
+
 const root = ref<HTMLDivElement>();
 const contextMenu = ref<ContextMenuEntry[]>();
 const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
 // TODO: sync BPM and time to project
-const bpm = ref(120);
 const time = ref(0);
 const sharedSeekPointer = ref(0);
 
@@ -36,7 +43,7 @@ const patternEditorVisible = ref(true);
 const nodesEditorVisible = ref(true);
 const settingsWindowVisible = ref(false);
 
-watch(sharedSeekPointer, () => MixeryUI.workspaces.get(props.workspaceId)!.rendering.redrawRequest(
+watch(sharedSeekPointer, () => getWorkspace().rendering.redrawRequest(
     RenderingHelper.Keys.SeekPointer
 ));
 
@@ -59,7 +66,7 @@ function openUrl(url: string) {
 
 document.fonts.ready.then(() => {
     console.log("Fonts loaded, redrawing...");
-    MixeryUI.workspaces.get(props.workspaceId)!.rendering.redrawRequest(RenderingHelper.Keys.All);
+    getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.All);
 });
 </script>
 
@@ -95,14 +102,22 @@ document.fonts.ready.then(() => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <Digital1DSlider name="BPM" display-mode="decimal" v-model="bpm" :min=10 :max=1000 />
+            <WorkspaceToolsbarButton is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
+            <Digital1DSlider
+                name="BPM"
+                display-mode="decimal"
+                :model-value="getWorkspace().project.bpm"
+                @update:model-value="sliders$changeBpm($event); $forceUpdate()"
+                :min=10 :max=1000
+            />
+            <div class="separator"></div>
+            <WorkspaceToolsbarButton is-icon><MixeryIcon type="play" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
             <Digital1DSlider name="Time" display-mode="time" v-model="time" :min=0 />
             <div class="separator"></div>
             <WorkspaceToolsbarButton @pointerdown="patternEditorVisible = !patternEditorVisible" :highlight="patternEditorVisible" is-icon><MixeryIcon type="pattern" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton @pointerdown="pianoRollVisible = !pianoRollVisible" :highlight="pianoRollVisible" is-icon><MixeryIcon type="piano" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton @pointerdown="nodesEditorVisible = !nodesEditorVisible" :highlight="nodesEditorVisible" is-icon><MixeryIcon type="nodes" /></WorkspaceToolsbarButton>
-            <div class="separator"></div>
-            <WorkspaceToolsbarButton>Project Name</WorkspaceToolsbarButton>
         </div>
         <div class="vertical-flex">
             <ExplorerPane>
