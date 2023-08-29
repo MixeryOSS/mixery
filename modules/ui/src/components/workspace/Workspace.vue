@@ -184,7 +184,7 @@ document.fonts.ready.then(() => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon :type="metronomeSymbol" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @pointerdown="metronome = !metronome" is-icon><MixeryIcon :type="metronomeSymbol" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"
@@ -193,8 +193,8 @@ document.fonts.ready.then(() => {
                 :min=10 :max=1000
             />
             <div class="separator"></div>
-            <WorkspaceToolsbarButton :highlight="isPlaying" @click="playButton" is-icon><MixeryIcon :type="isPlaying? 'pause' : 'play'" /></WorkspaceToolsbarButton>
-            <WorkspaceToolsbarButton @click="stopButton" is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton :highlight="isPlaying" @pointerdown="playButton" is-icon><MixeryIcon :type="isPlaying? 'pause' : 'play'" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton @pointerdown="stopButton" is-icon><MixeryIcon type="stop" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="Time"
                 display-mode="time"
