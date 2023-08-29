@@ -1,5 +1,5 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
-import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode } from "@mixery/engine";
+import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode, AudioClipNode } from "@mixery/engine";
 
 export namespace MixeryUI {
     export interface WorkspaceInterface {
@@ -50,6 +50,10 @@ export namespace MixeryUI {
         }
 
         // Initialize default nodes network
+        const audioInputNode = new AudioClipNode(project.nodes.generateNodeId(), ws.audio);
+        audioInputNode.data.channelName = "Default Channel";
+        audioInputNode.nodeY = -100;
+
         const midiInputNode = new NoteClipNode(project.nodes.generateNodeId());
         midiInputNode.data.channelName = "Default Channel";
 
@@ -59,9 +63,10 @@ export namespace MixeryUI {
         const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), ws.audio);
         speakerNode.nodeX = 300;
 
-        project.nodes.nodes.push(midiInputNode, pluckNode, speakerNode);
+        project.nodes.nodes.push(audioInputNode, midiInputNode, pluckNode, speakerNode);
         project.nodes.connect(midiInputNode.midiOut, pluckNode.midiIn);
         project.nodes.connect(pluckNode.audioOut, speakerNode.speakerPort);
+        project.nodes.connect(audioInputNode.audioOut, speakerNode.speakerPort);
 
         // Put some default folders
         project.projectResources.putFolder({namespace: "project", path: ["Audio Samples"]});

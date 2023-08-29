@@ -2,7 +2,8 @@
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { MixeryUI } from '@/handling/MixeryUI';
-import { Units, type ClippedNote, type PlaylistTrack } from '@mixery/engine';
+import { Snapper } from '@/handling/Snapper';
+import { Units, type ClippedNote, type PlaylistTrack, type IResource, type ResourcePath, type AudioClip } from '@mixery/engine';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const props = defineProps<{
     zoomX: number,
     trackLabelWidth: number,
     seekPointer: number,
+    snap: number,
 }>();
 const emits = defineEmits([
     "update:scrollX", "update:zoomX",
@@ -72,7 +74,13 @@ onMounted(() => {
             let clipWidth = clip.durationUnit * props.zoomX / 96;
             let textX = clipX < 0? 0 : clipX;
             if (clipX > canvas.value!.offsetWidth || (clipX + clipWidth) < 0) return;
-            const clipName = clip.type == "notes"? clip.clipChannel : "<Unknown>";
+            let clipName: string;
+            switch (clip.type) {
+                case "notes": clipName = `Notes: ${clip.clipChannel}`; break;
+                case "audio": clipName = `Audio: ${clip.resource.path[clip.resource.path.length - 1]} -> ${clip.clipChannel}`; break;
+                default: clipName = `<Unknown>`; break;
+            }
+
             const selected = getWorkspace().selectedClip == clip;
             
             if (canvas.value!.offsetHeight > 30) {
@@ -124,6 +132,40 @@ onMounted(() => {
                         });
                     }
                 }
+
+                if (clip.type == "audio") {
+                    const res = getWorkspace().project.resourcesManager.get(clip.resource);
+                    if (!res) {
+                        getWorkspace().project.resourcesManager.loadResource(clip.resource);
+                        return;
+                    }
+                    if (!res.waveform) return;
+
+                    const bpm = getWorkspace().project.bpm;
+                    const offset = Math.floor(Units.unitsToMs(bpm, clip.audioStartAtUnit) * res.waveform[0].sampleRate / 1000);
+                    const samples = Math.floor(Units.unitsToMs(bpm, clip.durationUnit) * res.waveform[0].sampleRate / 1000);
+                    const pxPerSample = (clipWidth - 4) / samples;
+                    const waveformsHeight = canvas.value!.offsetHeight - 16;
+                    const peak = waveformsHeight / (res.waveform.length * 2);
+
+                    for (let ch = 0; ch < res.waveform.length; ch++) {
+                        const middle = 14 + (ch * 2 + 1) * peak;
+                        
+                        renderer.begin();
+                        for (let i = 0; i < samples; i++) {
+                            if (offset + i >= res.waveform[ch].pos.length) continue;
+                            let v = res.waveform[ch].pos[offset + i];
+                            renderer.line(clipX + 2 + i * pxPerSample, middle - peak * v);
+                        }
+                        for (let i = samples - 1; i >= 0; i--) {
+                            if (offset + i >= res.waveform[ch].neg.length) continue;
+                            let v = res.waveform[ch].pos[offset + i];
+                            renderer.line(clipX + 2 + i * pxPerSample, middle + peak * v);
+                        }
+                        renderer.fill(getTrack().trackColor ?? accent);
+                        renderer.end();
+                    }
+                }
             } else {
                 // TODO draw clip only
                 renderer.begin()
@@ -154,6 +196,49 @@ function onScroll(event: WheelEvent) {
 
     getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
 }
+
+async function dropEventToResourceHandle(event: DragEvent) {
+    if (event.dataTransfer) {
+        const resourceRefJSON = event.dataTransfer.getData("application/x.mixery.resource");
+        if (resourceRefJSON) {
+            const resourceRef: {workspaceId: string, path: ResourcePath} = JSON.parse(resourceRefJSON);
+            const fromWorkspace = MixeryUI.workspaces.get(resourceRef.workspaceId);
+            if (!fromWorkspace) return undefined;
+
+            // TODO also force loading the resource when loading project from disk
+            return await fromWorkspace.project.resourcesManager.loadResource(resourceRef.path);
+        }
+    }
+
+    return undefined;
+}
+
+function onDragOver(event: DragEvent) {
+    event.preventDefault();
+}
+
+async function onDrop(event: DragEvent) {
+    event.preventDefault();
+    const handle = await dropEventToResourceHandle(event);
+    if (!handle) return;
+
+    if (handle.audioBuffer) {
+        const clip: AudioClip = {
+            type: "audio",
+            clipChannel: "Default Channel", // Use the currently selected channel
+            startAtUnit: Snapper.snap(scrollX.value + event.offsetX * 96 / zoomX.value, props.snap),
+            durationUnit: Units.msToUnits(getWorkspace().project.bpm, (handle.audioBuffer.length / handle.audioBuffer.sampleRate) * 1000),
+            resource: handle.path,
+            audioStartAtUnit: 0,
+            stretchFactor: 1
+        };
+        getTrack().clips.push(clip);
+        getWorkspace().selectedClip = clip;
+        getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
+    }
+
+    // TODO parse notes presets...
+}
 </script>
 
 <template>
@@ -173,6 +258,8 @@ function onScroll(event: WheelEvent) {
             @pointermove="emits('canvas:pointermove', $event)"
             @pointerup="emits('canvas:pointerup', $event)"
             @contextmenu="$event.preventDefault()"
+            @dragover="onDragOver"
+            @drop="onDrop"
         ></canvas>
     </div>
 </template>

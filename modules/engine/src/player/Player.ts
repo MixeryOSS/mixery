@@ -1,4 +1,4 @@
-import { Clip, ClippedNote, Project, Workspace } from "../index.js";
+import { AudioClip, AudioClipNode, Clip, ClippedNote, Project, Workspace } from "../index.js";
 import { Units } from "../misc/Units.js";
 
 export class Player {
@@ -8,7 +8,7 @@ export class Player {
     /**
      * Higher == more precise.
      */
-    quality: number = 100;
+    quality: number = 1000;
 
     constructor(
         public readonly project: Project
@@ -46,53 +46,100 @@ export class Player {
                     (next >= clipStartMs && next <= clipEndMs)
                 )) return;
 
-                if (clip.type == "notes") {
-                    const notes = clip.notes.map(note => {
-                        const noteStartMs = Units.unitsToMs(bpm, note.startAtUnit);
-                        const noteDurationMs = Units.unitsToMs(bpm, note.durationUnit);
-                        const noteEndMs = noteStartMs + noteDurationMs;
-                        // TODO filtering for performance
-
-                        return <Playable<ClippedNote>> {
-                            ref: note,
-                            startMs: clipStartMs + noteStartMs,
-                            durationMs: noteDurationMs,
+                switch (clip.type) {
+                    case "notes": {
+                        const notes = clip.notes.map(note => {
+                            const noteStartMs = Units.unitsToMs(bpm, note.startAtUnit);
+                            const noteDurationMs = Units.unitsToMs(bpm, note.durationUnit);
+                            const noteEndMs = noteStartMs + noteDurationMs;
+                            // TODO filtering for performance
+    
+                            return <Playable<ClippedNote>> {
+                                ref: note,
+                                startMs: clipStartMs + noteStartMs,
+                                durationMs: noteDurationMs,
+                                play() {
+                                    self.project.nodes.sendNoteSignal(clip.clipChannel, {
+                                        signalType: "instant",
+                                        eventType: "keydown",
+                                        midiIndex: note.midiIndex,
+                                        velocity: note.velocity
+                                    });
+                                },
+                                stop() {
+                                    self.project.nodes.sendNoteSignal(clip.clipChannel, {
+                                        signalType: "instant",
+                                        eventType: "keyup",
+                                        midiIndex: note.midiIndex,
+                                        velocity: note.velocity
+                                    });
+                                },
+                            };
+                        });
+    
+                        this.scheduled.add({
+                            ref: clip,
+                            startMs: clipStartMs,
+                            durationMs: clipDurationMs,
                             play() {
-                                self.project.nodes.sendNoteSignal(clip.clipChannel, {
-                                    signalType: "instant",
-                                    eventType: "keydown",
-                                    midiIndex: note.midiIndex,
-                                    velocity: note.velocity
-                                });
+                                notes.forEach(note => self.scheduled.add(note));
                             },
                             stop() {
-                                self.project.nodes.sendNoteSignal(clip.clipChannel, {
-                                    signalType: "instant",
-                                    eventType: "keyup",
-                                    midiIndex: note.midiIndex,
-                                    velocity: note.velocity
+                                notes.forEach(note => {
+                                    if (self.scheduled.has(note)) self.scheduled.delete(note);
+                                    else if (self.playing.has(note)) {
+                                        self.playing.delete(note);
+                                        note.stop();
+                                    }
                                 });
                             },
-                        };
-                    });
+                        });
 
-                    this.scheduled.add({
-                        ref: clip,
-                        startMs: clipStartMs,
-                        durationMs: clipDurationMs,
-                        play() {
-                            notes.forEach(note => self.scheduled.add(note));
-                        },
-                        stop() {
-                            notes.forEach(note => {
-                                if (self.scheduled.has(note)) self.scheduled.delete(note);
-                                else if (self.playing.has(note)) {
-                                    self.playing.delete(note);
-                                    note.stop();
+                        break;
+                    }
+                    case "audio": {
+                        let sourceNode: AudioBufferSourceNode;
+                        const timestamp = self.audioContext.currentTime;
+                        const timestampPlayer = self.currentMs / 1000;
+
+                        function play(buffer: AudioBuffer, clip: AudioClip, dest: AudioClipNode) {
+                            if (!buffer) return;
+                            const bpm = self.project.bpm;
+                            const playAt = self.playTimestampSec + clipStartMs / 1000; // At which time should the clip be played
+                            let slice = Units.unitsToMs(bpm, clip.audioStartAtUnit) / 1000 + (timestampPlayer - clipStartMs / 1000); // Offset since start of the buffer
+                            if (slice < 0.01) slice = 0; // TODO "ahead pointer" to prevent inaccurate timing
+
+                            sourceNode = self.audioContext.createBufferSource();
+                            sourceNode.buffer = buffer;
+                            sourceNode.connect(dest.audioOut.socket as any);
+                            sourceNode.start(playAt, slice); // TODO duration
+                        }
+
+                        this.scheduled.add({
+                            ref: clip,
+                            startMs: clipStartMs,
+                            durationMs: clipDurationMs,
+                            play() {
+                                if (sourceNode) return;
+                                let dest = self.project.nodes.nodes.find(v => v instanceof AudioClipNode);
+                                if (!dest) return;
+
+                                const res = self.project.resourcesManager.get(clip.resource);
+                                if (!res) {
+                                    self.project.resourcesManager.loadResourceWithLoader(clip.resource)
+                                    .then(result => play(result.audioBuffer, clip, dest as AudioClipNode));
+                                } else {
+                                    play(res.audioBuffer, clip, dest as AudioClipNode);
                                 }
-                            });
-                        },
-                    });
+                            },
+                            stop() {
+                                if (!sourceNode) return;
+                                sourceNode.stop();
+                                sourceNode = undefined;
+                            }
+                        });
+                        break;
+                    }
                 }
 
                 this.scheduledClips.add(clip);

@@ -7,7 +7,9 @@ export * from "./misc/LoadingManager.js";
 export * from "./misc/Registries.js";
 export * from "./misc/Temperaments.js";
 export * from "./misc/Units.js";
+export * from "./misc/Waveforms.js";
 
+export * from "./nodes/AudioClipNode.js";
 export * from "./nodes/INode.js";
 export * from "./nodes/NodesNetwork.js";
 export * from "./nodes/NoteClipNode.js";

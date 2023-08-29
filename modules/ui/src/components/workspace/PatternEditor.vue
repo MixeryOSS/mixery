@@ -182,6 +182,7 @@ watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.P
                         :track-index="index"
                         :track-label-width="trackLabelWidth - 41"
                         :seek-pointer="seekPointer"
+                        :snap="snap"
                         v-model:scroll-x="scrollX"
                         v-model:zoom-x="zoomX"
                         @canvas:pointerdown="onCanvasMouseDown(track, $event)"

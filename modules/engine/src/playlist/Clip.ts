@@ -1,3 +1,5 @@
+import { ResourcePath } from "../index.js";
+
 export interface IClip<T extends string> {
     type: T;
 
@@ -26,6 +28,24 @@ export interface NotesClip extends IClip<"notes"> {
     notes: ClippedNote[];
 }
 
+export interface AudioClip extends IClip<"audio"> {
+    /**
+     * Path to resource. If the resource is not loaded, it will schedule a new loading task.
+     */
+    resource: ResourcePath;
+
+    /**
+     * Start time of the sample. `0` will play the start of the audio sample right at the start of
+     * the clip.
+     */
+    audioStartAtUnit: number;
+
+    /**
+     * Sample stretch factor. `1` means the sample will be played at 1x speed.
+     */
+    stretchFactor: number;
+}
+
 export interface ClippedNote {
     noteColor?: `#${string}`;
     startAtUnit: number;
@@ -34,4 +54,4 @@ export interface ClippedNote {
     velocity: number;
 }
 
-export type Clip = NotesClip;
+export type Clip = NotesClip | AudioClip;

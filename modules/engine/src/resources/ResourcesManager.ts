@@ -1,10 +1,11 @@
 import { IFileResource, IResource, IResourcesStore, Project } from "../index.js";
 import { LoadingManager } from "../misc/LoadingManager.js";
+import { Waveforms } from "../misc/Waveforms.js";
 import { ResourceNamespace, ResourcePath } from "./ResourcePath.js";
 
-type CacheID = `${ResourceNamespace}:${string}`;
+type LoadedResourceID = `${ResourceNamespace}:${string}`;
 
-function makeCacheId(path: ResourcePath): CacheID {
+function makeLoadedResourceID(path: ResourcePath): LoadedResourceID {
     return `${path.namespace}:${path.path.join("/")}`;
 }
 
@@ -13,7 +14,7 @@ export class ResourcesManager {
         user: undefined,
         project: undefined
     };
-    cache: Map<CacheID, ResourceHandle> = new Map();
+    loadedResources: Map<LoadedResourceID, LoadedResource> = new Map();
 
     constructor(
         public readonly project: Project,
@@ -22,56 +23,54 @@ export class ResourcesManager {
         this.stores.project = project.projectResources;
     }
 
-    makeHandle(path: ResourcePath): ResourceHandle {
+    async loadResource(path: ResourcePath): Promise<LoadedResource> {
         const manager = this;
-        const cacheId = makeCacheId(path);
-        if (this.cache.has(cacheId)) return this.cache.get(cacheId);
+        const resourceId = makeLoadedResourceID(path);
+        if (this.loadedResources.has(resourceId)) return this.loadedResources.get(resourceId);
 
         const store = this.stores[path.namespace];
-        let cachedResource: IResource;
-        let cachedAudioBuffer: AudioBuffer;
+        let resource = await store.getResource(path);
+        let audioBuffer: AudioBuffer;
+        let waveform: Waveforms.WaveformChannelData[];
 
-        return {
+        if (resource.isFile && (resource as IFileResource).blob.type.startsWith("audio/")) {
+            audioBuffer = await (resource as IFileResource).getAudioBuffer();
+            waveform = await Waveforms.sampleWaveform(audioBuffer);
+        }
+
+        const handle = {
             get path() { return path; },
             get manager() { return manager; },
-            get cacheId() { return cacheId; },
-            get cachedResource() {
-                if (!cachedResource) {
-                    const task = store
-                        .getResource(path)
-                        .then(resource => cachedResource = resource);
-                    manager.loadingManager.add(task);
-                }
-
-                return cachedResource;
-            },
-            get cachedAudioBuffer() {
-                if (!cachedAudioBuffer) {
-                    const task = store
-                        .getResource(path)
-                        .then(async resource => {
-                            if (resource.isFile) {
-                                return await (resource as IFileResource).getAudioBuffer();
-                            } else {
-                                return null;
-                            }
-                        })
-                        .then(audioBuffer => cachedAudioBuffer = audioBuffer);
-                    manager.loadingManager.add(task);
-                }
-
-                return cachedAudioBuffer;
-            },
+            get resourceId() { return resourceId; },
+            get resource() { return resource; },
+            get audioBuffer() { return audioBuffer; },
+            get waveform() { return waveform; },
         };
+
+        this.loadedResources.set(resourceId, handle);
+        return handle;
+    }
+
+    loadResourceWithLoader(path: ResourcePath): Promise<LoadedResource> {
+        const task = this.loadResource(path)
+        this.loadingManager.add(task);
+        return task;
+    }
+
+    get(path: ResourcePath): LoadedResource | undefined {
+        const resourceId = makeLoadedResourceID(path);
+        if (this.loadedResources.has(resourceId)) return this.loadedResources.get(resourceId);
+        return undefined;
     }
 }
 
-export interface ResourceHandle {
+export interface LoadedResource {
     readonly path: ResourcePath;
     readonly manager: ResourcesManager;
+    readonly resource: IResource;
+    readonly resourceId: string;
 
-    // Caching
-    readonly cacheId: CacheID;
-    readonly cachedResource: IResource;
-    readonly cachedAudioBuffer: AudioBuffer;
+    // Preloaded objects
+    readonly audioBuffer?: AudioBuffer;
+    readonly waveform?: Waveforms.WaveformChannelData[];
 }

@@ -71,15 +71,20 @@ class NoteObject implements ToolObject {
 const toolContext: ToolContext = {
     createObject() {
         let note: ClippedNote = { midiIndex: 0, startAtUnit: 0, durationUnit: 0, velocity: 0.8 };
-        getSelectedClip().notes.push(note);
+        const selectedClip = getSelectedClip();
+        if (selectedClip.type == "notes") selectedClip.notes.push(note);
         return new NoteObject(note);
     },
     deleteObject(obj) {
-        const idx = getSelectedClip().notes.indexOf(obj.unwrap as unknown as ClippedNote);
-        getSelectedClip().notes.splice(idx, 1);
+        const selectedClip = getSelectedClip();
+        if (selectedClip.type != "notes") return;
+        const idx = selectedClip.notes.indexOf(obj.unwrap as unknown as ClippedNote);
+        selectedClip.notes.splice(idx, 1);
     },
     hitTest(position, trackPosition) {
-        let note = getSelectedClip().notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
+        const selectedClip = getSelectedClip();
+        if (selectedClip.type != "notes") return;
+        let note = selectedClip.notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
         return note? new NoteObject(note) : undefined;
     },
     selectObject(obj) {
@@ -165,7 +170,8 @@ onMounted(() => {
         
         renderer.fillRect(pianoWidth.value - 2, 0, 2, canvas.value!.offsetHeight, "#1f1f1f");
 
-        getSelectedClip().notes.forEach(note => {
+        const selectedClip = getSelectedClip();
+        if (selectedClip.type == "notes") selectedClip.notes.forEach(note => {
             const index = 127 - note.midiIndex - firstRowFlippedIndex;
             let noteX = (note.startAtUnit - scrollX.value) * zoomX.value / 96;
             let noteWidth = note.durationUnit * zoomX.value / 96;
