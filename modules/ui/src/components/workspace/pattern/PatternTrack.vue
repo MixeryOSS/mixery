@@ -142,9 +142,21 @@ onMounted(() => {
                     if (!res.waveform) return;
 
                     const bpm = getWorkspace().project.bpm;
-                    const offset = Math.floor(Units.unitsToMs(bpm, clip.audioStartAtUnit) * res.waveform[0].sampleRate / 1000);
-                    const samples = Math.floor(Units.unitsToMs(bpm, clip.durationUnit) * res.waveform[0].sampleRate / 1000);
+                    const waveformSampleRate = res.waveform[0].sampleRate;
+                    let offset = Math.floor(Units.unitsToMs(bpm, clip.audioStartAtUnit) * waveformSampleRate / 1000);
+                    let samples = Math.floor(Units.unitsToMs(bpm, clip.durationUnit) * waveformSampleRate / 1000);
+                    let waveformX = clipX;
                     const pxPerSample = (clipWidth - 4) / samples;
+                    const samplesPerPage = Math.floor(canvas.value!.offsetWidth / pxPerSample);
+                    
+                    // Optimize rendering
+                    if (waveformX < 0) {
+                        const samplesOutside = Math.floor(-waveformX / pxPerSample);
+                        offset += samplesOutside;
+                        waveformX = 0;
+                    }
+
+                    samples = Math.min(samples, samplesPerPage);
                     const waveformsHeight = canvas.value!.offsetHeight - 16;
                     const peak = waveformsHeight / (res.waveform.length * 2);
 
@@ -155,12 +167,12 @@ onMounted(() => {
                         for (let i = 0; i < samples; i++) {
                             if (offset + i >= res.waveform[ch].pos.length) continue;
                             let v = res.waveform[ch].pos[offset + i];
-                            renderer.line(clipX + 2 + i * pxPerSample, middle - peak * v);
+                            renderer.line(waveformX + 2 + i * pxPerSample, middle - peak * v);
                         }
                         for (let i = samples - 1; i >= 0; i--) {
                             if (offset + i >= res.waveform[ch].neg.length) continue;
                             let v = res.waveform[ch].pos[offset + i];
-                            renderer.line(clipX + 2 + i * pxPerSample, middle + peak * v);
+                            renderer.line(waveformX + 2 + i * pxPerSample, middle + peak * v);
                         }
                         renderer.fill(getTrack().trackColor ?? accent);
                         renderer.end();
