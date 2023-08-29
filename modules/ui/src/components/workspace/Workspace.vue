@@ -30,7 +30,10 @@ const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
 const updateThing = ref(0); // Dirty way to update
-const reactiveBpm = ref(getWorkspace().project.bpm);
+const reactiveBpm = computed(() => {
+    updateThing.value;
+    return getWorkspace().project.bpm;
+});
 const startTime = ref(0);
 const sharedSeekPointer = computed(() => {
     updateThing.value;
@@ -55,7 +58,7 @@ function sliders$changeBpm(bpm: number) {
     const ws = getWorkspace();
     if (ws.player.isPlaying) return; // Can't change BPM while playing
     ws.project.bpm = bpm;
-    reactiveBpm.value = bpm;
+    updateThing.value++;
 }
 
 function sliders$changeTime(ms: number) {
@@ -115,6 +118,15 @@ async function stopButton() {
 }
 
 const metronomeButton = ref<InstanceType<typeof WorkspaceToolsbarButton>>();
+const metronomeSymbol = computed(() => {
+    updateThing.value;
+    const halftickDivision = getWorkspace().workspace.metronome.division / 2;
+    const currentUnit = Units.msToUnits(reactiveBpm.value, sharedSeekPointer.value);
+    const halfticksPerBar = 96 * 4 / halftickDivision;
+    const currentTickIndex = Math.floor(currentUnit / halftickDivision) % halfticksPerBar;
+    const icons = ["metronome-middle", "metronome-right", "metronome-middle", "metronome-left"];
+    return icons[currentTickIndex % icons.length];
+});
 function flashMetronomeButton() {
     if (!metronomeButton.value) return;
     (metronomeButton.value.$el as HTMLElement).animate([
@@ -172,7 +184,7 @@ document.fonts.ready.then(() => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon type="metronome-left" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @click="metronome = !metronome" is-icon><MixeryIcon :type="metronomeSymbol" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"
