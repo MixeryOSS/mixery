@@ -68,6 +68,9 @@ function onClick(event: PointerEvent) {
     } else if (props.res.resource.isFile) {
         if (props.res.resource.blob.type.startsWith("audio/")) {
             props.res.resource.getAudioBuffer().then(async buffer => {
+                if (buffer.duration > 10) return;
+                // TODO send system message
+
                 const audioCtx = getWorkspace().workspace.audio;
                 if (audioCtx instanceof AudioContext && audioCtx.state != "running") await audioCtx.resume();
 
