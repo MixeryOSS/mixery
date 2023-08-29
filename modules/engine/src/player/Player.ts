@@ -121,7 +121,9 @@ export class Player {
                             durationMs: clipDurationMs,
                             play() {
                                 if (sourceNode) return;
-                                let dest = self.project.nodes.nodes.find(v => v instanceof AudioClipNode);
+                                let dest = self.project.nodes.nodes.find(v =>
+                                    v instanceof AudioClipNode &&
+                                    v.data.channelName == clip.clipChannel);
                                 if (!dest) return;
 
                                 const res = self.project.resourcesManager.get(clip.resource);
