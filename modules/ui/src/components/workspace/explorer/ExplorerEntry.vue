@@ -199,12 +199,14 @@ function onDrop(event: DragEvent) {
             padding-left: 8px;
             white-space: nowrap;
             text-overflow: ellipsis;
+            overflow: hidden;
         }
 
         .drag-handle {
             width: 24px;
             position: relative;
             cursor: grab;
+            flex-shrink: 0;
 
             &::before {
                 content: '';
