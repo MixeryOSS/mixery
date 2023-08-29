@@ -38,9 +38,9 @@ function updateAccentColor() {
         </div>
         <div class="entry" @pointerup="updateAccentColor" @pointermove="updateAccentColor">
             <div class="label">Accent Color</div>
-            <Digital1DSlider name="Hue" v-model="settings.accentColor[0]" />
-            <Digital1DSlider name="Sat" v-model="settings.accentColor[1]" />
-            <Digital1DSlider name="Light" v-model="settings.accentColor[2]" />
+            <Digital1DSlider name="Hue" v-model="settings.accentColor[0]" :min="0" :max="360" />
+            <Digital1DSlider name="Sat" v-model="settings.accentColor[1]" :min="0" :max="100" />
+            <Digital1DSlider name="Light" v-model="settings.accentColor[2]" :min="0" :max="100" />
         </div>
     </MixeryWindow>
 </template>
