@@ -63,6 +63,10 @@ export namespace MixeryUI {
         project.nodes.connect(midiInputNode.midiOut, pluckNode.midiIn);
         project.nodes.connect(pluckNode.audioOut, speakerNode.speakerPort);
 
+        // Put some default folders
+        project.projectResources.putFolder({namespace: "project", path: ["Audio Samples"]});
+        project.projectResources.putFolder({namespace: "project", path: ["Presets"]});
+
         const wsInterface: WorkspaceInterface = {
             workspace: ws,
             id,
@@ -82,6 +86,8 @@ export namespace MixeryUI {
 
                 this.project = project;
                 this.player = new Player(project);
+                this.selectedNode = undefined;
+                // TODO selectedClip
             },
         };
 

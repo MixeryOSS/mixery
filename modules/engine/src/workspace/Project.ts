@@ -1,16 +1,26 @@
+import { IResourcesStore, MemoryResourcesStore } from "../index.js";
 import { NodesNetwork, SavedNodesNetwork } from "../nodes/NodesNetwork.js";
 import { Playlist } from "../playlist/Playlist.js";
+import { ResourcesManager } from "../resources/ResourcesManager.js";
 import { Workspace } from "./Workspace.js";
 
 export class Project {
     metadata: ProjectMetadata = {};
     bpm: number = 120;
     nodes: NodesNetwork = new NodesNetwork();
-    playlist: Playlist = {
-        tracks: []
-    };
+    playlist: Playlist = {tracks: []};
+    projectResources: IResourcesStore;
+    resourcesManager: ResourcesManager;
 
-    constructor(public readonly workspace: Workspace) {}
+    constructor(public readonly workspace: Workspace) {
+        this.projectResources = new MemoryResourcesStore("project", {
+            async decodeAudioData(blob) {
+                return await workspace.audio.decodeAudioData(await blob.arrayBuffer());
+            },
+        });
+
+        this.resourcesManager = new ResourcesManager(this, workspace.loadingManager);
+    }
 
     save() {
         let saved: SavedProject = {
@@ -42,4 +52,5 @@ export interface SavedProject {
     bpm: number;
     nodes: SavedNodesNetwork;
     playlist: Playlist;
+    // TODO resources;
 }

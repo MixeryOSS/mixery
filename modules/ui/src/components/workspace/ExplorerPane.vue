@@ -2,10 +2,30 @@
 import { onMounted, ref, watch } from 'vue';
 import { useTrackableXY } from '../composes';
 import MixeryIcon from '../icons/MixeryIcon.vue';
+import ExplorerEntry from './explorer/ExplorerEntry.vue';
+import { MixeryUI } from '@/handling/MixeryUI';
+import type { IResource } from '@mixery/engine';
+
+const props = defineProps<{
+    workspaceId: string
+}>();
+
+function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
+
+interface ResourceHolder {
+    label?: string;
+    resource: IResource;
+}
 
 const width = ref(300);
 const root = ref<HTMLDivElement>();
 const resizer = ref<HTMLDivElement>();
+const content = ref<ResourceHolder[]>([
+    {
+        label: "Project Resources",
+        resource: await getWorkspace().project.projectResources.getResource({namespace: "project", path: []})
+    }
+]);
 
 watch(width, v => root.value!.style.width = `${v}px`);
 
@@ -19,8 +39,9 @@ onMounted(() => {
     <div class="explorer-pane" ref="root">
         <div class="container">
             <div class="searchbox" contenteditable></div>
+            <slot name="header"></slot>
             <div class="content">
-                <slot></slot>
+                <template v-for="entry in content"><ExplorerEntry :res="entry" :workspace-id="props.workspaceId" /></template>
             </div>
         </div>
         <div class="resizer" ref="resizer"></div>

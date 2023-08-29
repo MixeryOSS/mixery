@@ -1,3 +1,4 @@
+import { LoadingManager } from "../misc/LoadingManager.js";
 import { GlobalRegistries, IReadonlyRegistry, TransitiveRegistry } from "../misc/Registries.js";
 import { NodeFactory } from "../nodes/INode.js";
 import { Metronome } from "./Metronome.js";
@@ -16,9 +17,11 @@ export class Workspace {
         nodeFactories: new TransitiveRegistry(GlobalRegistries.NODE_FACTORIES)
     };
 
+    loadingManager: LoadingManager;
     metronome: Metronome;
 
     constructor(public readonly audio: BaseAudioContext) {
+        this.loadingManager = new LoadingManager();
         this.metronome = new Metronome(this);
     }
 }

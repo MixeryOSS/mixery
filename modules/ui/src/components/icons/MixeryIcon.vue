@@ -50,6 +50,13 @@ const props = defineProps<{
         <path d="M18.9393 9.95644L19.6465 10.6636L18.9393 11.3707H18.2322V10.6636L18.9393 9.95644Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="12.5" cy="17" r="1" fill="currentColor"/>
     </svg>
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'folder-close'">
+        <path d="M5 10C5 8.4 6.33333 8 7 8C7.30172 8 7.63784 8 8 8M5 10C5 11.6 5 15.6667 5 18C5 18.6667 5.4 20 7 20C8.6 20 15 20 18 20C18.6667 20 20 19.6 20 18C20 16.4 20 12.3333 20 10C20 9.33333 19.6 8 18 8C17.5957 8 16.8849 8 16 8M5 10V7C5 6.33333 5.4 5 7 5H10M16 8V7C16 5.4 14.6667 5 14 5H10M16 8C13.735 8 10.3289 8 8 8M8 8V7C8 6.33333 8.4 5 10 5" stroke="currentColor"/>
+    </svg>
+    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'folder-open'">
+        <path d="M7 20C5.4 20 5 18.6667 5 18C5 15.6667 5 11.6 5 10M7 20C8.6 20 15 20 18 20M7 20H18M18 20C18.6667 20 19.5 19.5 20 18M5 10C5 8.4 6.33333 8 7 8C7.30172 8 7.63784 8 8 8V7C8 6.33333 8.4 5 10 5M5 10V7C5 6.33333 5.4 5 7 5H10M10 5H14C14.6667 5 16 5.4 16 7V7.5C16.8849 7.5 17.5957 7.5 18 7.5C18.4973 7.5 19.3657 7.72262 19.7747 8.5" stroke="currentColor"/>
+        <path d="M7 20C5.4 20 5 18.6667 5 18C5.5 16 6.5 12 7 10.5C7.50596 8.98211 8.83333 8.5 9.5 8.5H20.5C22.1 8.5 22 9.83333 22 10.5C21.5 13 20.5 17 20 18C19.2845 19.4311 18.6667 20 18 20M7 20C8.6 20 15 20 18 20M7 20H18" stroke="currentColor"/>
+    </svg>
 
     <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg" v-if="props.type == 'play'">
         <path d="M17.0781 11.7318L10.6402 5.23176C9.98886 4.68899 9 5.15214 9 5.99998V19C9 19.8479 9.98886 20.311 10.6402 19.7682L17.0781 13.2682C17.5579 12.8684 17.5579 12.1316 17.0781 11.7318Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>

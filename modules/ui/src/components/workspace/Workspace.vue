@@ -146,9 +146,14 @@ getWorkspace().workspace.metronome.node?.midiIn.onNoteEvent.listen(note => {
     else if (note.signalType == "delayed") setTimeout(() => flashMetronomeButton(), note.delayMs);
 });
 
-document.fonts.ready.then(() => {
-    console.log("Fonts loaded, redrawing...");
+getWorkspace().workspace.loadingManager.add(document.fonts.ready.then(() => {
+    console.log("Fonts loaded!");
+}));
+
+// Update everything when something loaded
+getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
     getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.All);
+    updateThing.value++;
 });
 </script>
 
@@ -208,14 +213,9 @@ document.fonts.ready.then(() => {
             <WorkspaceToolsbarButton @pointerdown="nodesEditorVisible = !nodesEditorVisible" :highlight="nodesEditorVisible" is-icon><MixeryIcon type="nodes" /></WorkspaceToolsbarButton>
         </div>
         <div class="vertical-flex">
-            <ExplorerPane>
-                <ExplorerEntry>
-                    <template v-slot:icon><MixeryIcon type="mixery" /></template>
-                    Mango
-                </ExplorerEntry>
-                <ExplorerEntry draggable>Sech</ExplorerEntry>
-                <ExplorerEntry>EZ</ExplorerEntry>
-            </ExplorerPane>
+            <Suspense>
+                <ExplorerPane :workspace-id="props.workspaceId" />
+            </Suspense>
             <WindowsContainer class="wcontainer">
                 <PatternEditor
                     v-model:visible="patternEditorVisible"
