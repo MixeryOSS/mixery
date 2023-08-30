@@ -25,7 +25,7 @@ const emits = defineEmits(["update:visible", "update:seekPointer"]);
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
 function getProject() { return getWorkspace().project; }
-function getSelectedClip() { return getWorkspace().selectedClip; }
+function getEditingClip() { return getWorkspace().editingNotesClip; }
 
 const canvas = ref<HTMLCanvasElement>();
 const scrollHandleX = ref<HTMLDivElement>();
@@ -48,8 +48,14 @@ const pianoWidth = ref(100);
 const scrollbarHeight = ref(40);
 const clipDuration = ref(96);
 const seekPointer = computed({
-    get() { return props.seekPointer - getSelectedClip().startAtUnit; },
-    set(v) { emits("update:seekPointer", v + getSelectedClip().startAtUnit); }
+    get() {
+        const editingClip = getEditingClip();
+        return props.seekPointer - (editingClip? editingClip.startAtUnit : 0);
+    },
+    set(v) {
+        const editingClip = getEditingClip();
+        emits("update:seekPointer", v + (editingClip? editingClip.startAtUnit : 0));
+    }
 });
 
 const snap = ref(96 / 8);
@@ -71,19 +77,19 @@ class NoteObject implements ToolObject {
 const toolContext: ToolContext = {
     createObject() {
         let note: ClippedNote = { midiIndex: 0, startAtUnit: 0, durationUnit: 0, velocity: 0.8 };
-        const selectedClip = getSelectedClip();
-        if (selectedClip.type == "notes") selectedClip.notes.push(note);
+        const selectedClip = getEditingClip();
+        if (selectedClip) selectedClip.notes.push(note);
         return new NoteObject(note);
     },
     deleteObject(obj) {
-        const selectedClip = getSelectedClip();
-        if (selectedClip.type != "notes") return;
+        const selectedClip = getEditingClip();
+        if (!selectedClip) return;
         const idx = selectedClip.notes.indexOf(obj.unwrap as unknown as ClippedNote);
         selectedClip.notes.splice(idx, 1);
     },
     hitTest(position, trackPosition) {
-        const selectedClip = getSelectedClip();
-        if (selectedClip.type != "notes") return;
+        const selectedClip = getEditingClip();
+        if (!selectedClip) return;
         let note = selectedClip.notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
         return note? new NoteObject(note) : undefined;
     },
@@ -117,7 +123,8 @@ onMounted(() => {
         if (!props.visible) return;
         if (!canvas.value) return;
         renderer.startRender();
-        clipDuration.value = getSelectedClip().durationUnit;
+        const editingClip = getEditingClip();
+        clipDuration.value = editingClip?.durationUnit ?? 0;
         const fancy = getWorkspace().settings.fancyRendering;
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
         const rowsPerScreen = Math.ceil(canvas.value!.offsetHeight / zoomY.value) + 1;
@@ -128,7 +135,7 @@ onMounted(() => {
         const renderVelocityBar = zoomY.value >= 20;
         const renderNoteName = zoomY.value >= 14;
         const seekX = (Units.msToUnits(props.reactiveBpm, seekPointer.value) - scrollX.value) * zoomX.value / 96;
-        const endOfClipX = (getSelectedClip().durationUnit - scrollX.value) * zoomX.value / 96;
+        const endOfClipX = ((editingClip?.durationUnit ?? 0) - scrollX.value) * zoomX.value / 96;
 
         renderer.fillRect(pianoWidth.value + seekX, 0, 2, canvas.value!.offsetHeight, accent);
         renderer.fillRect(pianoWidth.value + endOfClipX, 0, 2, canvas.value!.offsetHeight, "#ff7f7f");
@@ -170,8 +177,8 @@ onMounted(() => {
         
         renderer.fillRect(pianoWidth.value - 2, 0, 2, canvas.value!.offsetHeight, "#1f1f1f");
 
-        const selectedClip = getSelectedClip();
-        if (selectedClip.type == "notes") selectedClip.notes.forEach(note => {
+        if (!editingClip) return; // TODO draw "no notes clip selected"
+        editingClip.notes.forEach(note => {
             const index = 127 - note.midiIndex - firstRowFlippedIndex;
             let noteX = (note.startAtUnit - scrollX.value) * zoomX.value / 96;
             let noteWidth = note.durationUnit * zoomX.value / 96;

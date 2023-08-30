@@ -3,8 +3,8 @@ import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { Snapper } from '@/handling/Snapper';
-import { Units, type ClippedNote, type PlaylistTrack, type IResource, type ResourcePath, type AudioClip, AudioClipNode } from '@mixery/engine';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { Units, type ClippedNote, type ResourcePath, type AudioClip, AudioClipNode } from '@mixery/engine';
+import { computed, nextTick, onMounted, ref } from 'vue';
 
 const props = defineProps<{
     editorVisible: boolean,
@@ -81,7 +81,7 @@ onMounted(() => {
                 default: clipName = `<Unknown>`; break;
             }
 
-            const selected = getWorkspace().selectedClip == clip;
+            const selected = getWorkspace().selectedClips[0] == clip;
             
             if (canvas.value!.offsetHeight > 30) {
                 renderer.fillRoundRect(clipX + 1, 1, clipWidth - 2, 12, 4, getTrack().trackColor ?? accent);
@@ -247,7 +247,7 @@ async function onDrop(event: DragEvent) {
             stretchFactor: 1
         };
         getTrack().clips.push(clip);
-        getWorkspace().selectedClip = clip;
+        getWorkspace().selectedClips[0] = clip;
         getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
     }
 

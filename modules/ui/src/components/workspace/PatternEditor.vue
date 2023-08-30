@@ -77,12 +77,18 @@ class ClipObject implements ToolObject {
         public readonly unwrap: Clip
     ) {}
 }
+
+function setSelection(clip: Clip) {
+    getWorkspace().selectedClips[0] = clip;
+    if (clip.type == "notes") getWorkspace().editingNotesClip = clip;
+}
+
 const toolContext: ToolContext = {
     get snapSegmentSize() { return snap.value; },
     createObject() {
         const clipChannel = getWorkspace().selectedNode instanceof NoteClipNode
             ? (getWorkspace().selectedNode as NoteClipNode).data.channelName
-            : getWorkspace().selectedClip.type == "notes"? getWorkspace().selectedClip.clipChannel
+            : getWorkspace().selectedClips[0]?.type == "notes"? getWorkspace().selectedClips[0]?.clipChannel
             : "Default Channel";
 
         const clip: Clip = { // TODO automation clips and audio clips
@@ -92,7 +98,8 @@ const toolContext: ToolContext = {
             startAtUnit: 0,
             durationUnit: 0
         };
-        getWorkspace().selectedClip = clip;
+
+        setSelection(clip);
         return new ClipObject(clip);
     },
     deleteObject(obj) {
@@ -111,7 +118,7 @@ const toolContext: ToolContext = {
         }
     },
     selectObject(obj) {
-        getWorkspace().selectedClip = toRaw(obj.unwrap);
+        setSelection(toRaw(obj.unwrap));
         seekPointer.value += 0.1;
         nextTick(() => seekPointer.value -= 0.1);
     },

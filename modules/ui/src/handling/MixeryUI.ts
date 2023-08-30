@@ -1,18 +1,72 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
-import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode, AudioClipNode } from "@mixery/engine";
+import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode, AudioClipNode, type NotesClip } from "@mixery/engine";
 
 export namespace MixeryUI {
-    export interface WorkspaceInterface {
-        readonly workspace: Workspace;
-        readonly id: string;
-        readonly rendering: RenderingHelper.RenderingManager;
-        settings: WorkspaceSettings;
+    /**
+     * Create a new project with default setup.
+     * @param ws Mixery workspace.
+     * @returns Brand new project.
+     */
+    export function createNewProject(ws: Workspace): Project {
+        const project = new Project(ws);
+
+        // Playlist tracks
+        for (let i = 0; i < 9; i++) project.playlist.tracks.push({ trackName: `Track ${i + 1}`, clips: [], isMuted: false, trackHeight: 40 });
+
+        // Nodes network
+        const audioInputNode = new AudioClipNode(project.nodes.generateNodeId(), ws.audio);
+        audioInputNode.data.channelName = "Default Channel";
+        audioInputNode.nodeY = -100;
+        const midiInputNode = new NoteClipNode(project.nodes.generateNodeId());
+        midiInputNode.data.channelName = "Default Channel";
+        const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
+        pluckNode.nodeX = 150;
+        const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), ws.audio);
+        speakerNode.nodeX = 300;
+
+        project.nodes.nodes.push(audioInputNode, midiInputNode, pluckNode, speakerNode);
+        project.nodes.connect(midiInputNode.midiOut, pluckNode.midiIn);
+        project.nodes.connect(pluckNode.audioOut, speakerNode.speakerPort);
+        project.nodes.connect(audioInputNode.audioOut, speakerNode.speakerPort);
+
+        // Project resources
+        project.projectResources.putFolder({namespace: "project", path: ["Audio Samples"]});
+        project.projectResources.putFolder({namespace: "project", path: ["Presets"]});
+        return project;
+    }
+
+    export class WorkspaceView {
+        readonly rendering = new RenderingHelper.RenderingManager();
+        settings: WorkspaceSettings = {
+            fancyRendering: true,
+            accentColor: [177, 100, 71]
+        };
         project: Project;
-        selectedClip: Clip;
-        selectedNode: INode<any, any> | undefined;
         player: Player;
 
-        setProject(project: Project): void;
+        // Selections
+        selectedClips: Clip[] = []; // Patterns editor
+        selectedNode: INode<any, any> | undefined; // Nodes editor, TODO multiple nodes
+        editingNotesClip: NotesClip | undefined; // Piano roll
+        
+        constructor(
+            public readonly workspace: Workspace,
+            public readonly id: string
+        ) {
+            this.rendering = new RenderingHelper.RenderingManager();
+            this.project = createNewProject(workspace);
+            this.player = new Player(this.project);
+        }
+
+        setProject(project: Project): void {
+            this.player.stop();
+            this.project = project;
+            this.player = new Player(project);
+            this.selectedClips = [];
+            this.selectedNode = undefined;
+            this.editingNotesClip = undefined;
+            this.rendering.redrawRequest(RenderingHelper.Keys.All);
+        }
     }
 
     export interface WorkspaceSettings {
@@ -20,7 +74,7 @@ export namespace MixeryUI {
         accentColor: [number, number, number];
     }
 
-    export const workspaces: Map<string, WorkspaceInterface> = new Map();
+    export const workspaces: Map<string, WorkspaceView> = new Map();
 
     let counter = 0;
     function generateId() {
@@ -30,76 +84,9 @@ export namespace MixeryUI {
     export function createWorkspace(audioContext: AudioContext) {
         const ws = new Workspace(audioContext);
         const id = generateId();
-        const project = new Project(ws);
-        const selectedClip: Clip = {
-            type: "notes",
-            clipChannel: "Default Channel",
-            notes: [],
-            startAtUnit: 0,
-            durationUnit: 96 * 4
-        };
-        const track: PlaylistTrack = {
-            trackName: "Track 1",
-            clips: [selectedClip],
-            isMuted: false,
-            trackHeight: 40
-        };
-        project.playlist.tracks.push(track);
-        for (let i = 0; i < 9; i++) {
-            project.playlist.tracks.push({ trackName: `Track ${i + 2}`, clips: [], isMuted: false, trackHeight: 40 });
-        }
-
-        // Initialize default nodes network
-        const audioInputNode = new AudioClipNode(project.nodes.generateNodeId(), ws.audio);
-        audioInputNode.data.channelName = "Default Channel";
-        audioInputNode.nodeY = -100;
-
-        const midiInputNode = new NoteClipNode(project.nodes.generateNodeId());
-        midiInputNode.data.channelName = "Default Channel";
-
-        const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
-        pluckNode.nodeX = 150;
-
-        const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), ws.audio);
-        speakerNode.nodeX = 300;
-
-        project.nodes.nodes.push(audioInputNode, midiInputNode, pluckNode, speakerNode);
-        project.nodes.connect(midiInputNode.midiOut, pluckNode.midiIn);
-        project.nodes.connect(pluckNode.audioOut, speakerNode.speakerPort);
-        project.nodes.connect(audioInputNode.audioOut, speakerNode.speakerPort);
-
-        // Put some default folders
-        project.projectResources.putFolder({namespace: "project", path: ["Audio Samples"]});
-        project.projectResources.putFolder({namespace: "project", path: ["Presets"]});
-
-        const wsInterface: WorkspaceInterface = {
-            workspace: ws,
-            id,
-            rendering: new RenderingHelper.RenderingManager(),
-            settings: {
-                fancyRendering: true,
-                accentColor: [177, 100, 71]
-            },
-            project,
-            selectedClip,
-            selectedNode: undefined,
-            player: new Player(project),
-
-            setProject(project) {
-                // TODO clean up last project
-                this.player.stop();
-
-                this.project = project;
-                this.player = new Player(project);
-                this.selectedNode = undefined;
-                // TODO selectedClip
-                
-                this.rendering.redrawRequest(RenderingHelper.Keys.All);
-            },
-        };
-
-        workspaces.set(id, wsInterface);
-        return wsInterface;
+        const view = new WorkspaceView(ws, id);
+        workspaces.set(id, view);
+        return view;
     }
 
     export const defaultWorkspace = createWorkspace(new AudioContext({
