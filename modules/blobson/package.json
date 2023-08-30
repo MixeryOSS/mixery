@@ -1,0 +1,21 @@
+{
+  "name": "@mixery/blobson",
+  "version": "1.0.0",
+  "description": "Like JSON, but with Blob + ArrayBuffer support",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --build",
+    "watch": "tsc --watch"
+  },
+  "keywords": [],
+  "author": {
+    "name": "The Mixery Contributors",
+    "url": "https://github.com/MixeryOSS"
+  },
+  "license": "GPL-3.0-or-later",
+  "devDependencies": {
+    "typescript": "~5.1.6"
+  }
+}
