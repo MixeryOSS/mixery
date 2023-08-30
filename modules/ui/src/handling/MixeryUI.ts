@@ -45,7 +45,7 @@ export namespace MixeryUI {
         player: Player;
 
         // Selections
-        selectedClips: Clip[] = []; // Patterns editor
+        selectedClips: Set<Clip> = new Set(); // Patterns editor
         selectedNode: INode<any, any> | undefined; // Nodes editor, TODO multiple nodes
         editingNotesClip: NotesClip | undefined; // Piano roll
         
@@ -62,7 +62,7 @@ export namespace MixeryUI {
             this.player.stop();
             this.project = project;
             this.player = new Player(project);
-            this.selectedClips = [];
+            this.selectedClips.clear();
             this.selectedNode = undefined;
             this.editingNotesClip = undefined;
             this.rendering.redrawRequest(RenderingHelper.Keys.All);

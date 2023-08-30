@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import MixeryWindow from '../windows/MixeryWindow.vue';
-import TitlebarButton from '../windows/TitlebarButton.vue';
-import WindowToolsbar from '../windows/WindowToolsbar.vue';
-import MixeryIcon from '../icons/MixeryIcon.vue';
-import FancyScrollbar from './universal/FancyScrollbar.vue';
+import MixeryWindow from '../../windows/MixeryWindow.vue';
+import TitlebarButton from '../../windows/TitlebarButton.vue';
+import WindowToolsbar from '../../windows/WindowToolsbar.vue';
+import MixeryIcon from '../../icons/MixeryIcon.vue';
+import FancyScrollbar from '../universal/FancyScrollbar.vue';
 import { Units, type ClippedNote, type NotesClip } from '@mixery/engine';
 import { computed, onMounted, ref, watch, type ShallowRef, render } from 'vue';
-import { CanvasRenderer } from '../../canvas/CanvasRenderer';
-import { MidiText } from '../MidiText';
-import { useTrackableXY } from '../composes';
-import { Tools } from "../../handling/Tools";
+import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
+import { MidiText } from '../../MidiText';
+import { useTrackableXY } from '../../composes';
+import { Tools } from "../../../handling/Tools";
 import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
+import { internal } from './PianoRoll.internal';
 
 const props = defineProps<{
     visible: boolean,
@@ -33,6 +34,7 @@ const scrollHandleY = ref<HTMLDivElement>();
 const zoomHandle = ref<HTMLSpanElement>();
 const canvasRenderer = ref<CanvasRenderer>();
 
+const seekUpdateHandle = ref(0);
 const scrollX = ref(0); // TODO track time instead
 const scrollY = ref(0);
 const zoomX = ref(96); // 96px per beat (100%)
@@ -49,12 +51,13 @@ const scrollbarHeight = ref(40);
 const clipDuration = ref(96);
 const seekPointer = computed({
     get() {
+        seekUpdateHandle.value;
         const editingClip = getEditingClip();
-        return props.seekPointer - (editingClip? editingClip.startAtUnit : 0);
+        return props.seekPointer - (editingClip? Units.unitsToMs(getProject().bpm, editingClip.startAtUnit) : 0);
     },
     set(v) {
         const editingClip = getEditingClip();
-        emits("update:seekPointer", v + (editingClip? editingClip.startAtUnit : 0));
+        emits("update:seekPointer", v + (editingClip? Units.unitsToMs(getProject().bpm, editingClip.startAtUnit) : 0));
     }
 });
 
@@ -62,24 +65,12 @@ const snap = ref(96 / 8);
 const tools = Tools.LIST.map(v => v());
 const selectedTool = ref(tools[0]);
 
-class NoteObject implements ToolObject {
-    constructor(public readonly unwrap: ClippedNote) {}
-
-    get startPosition(): number { return this.unwrap.startAtUnit; }
-    set startPosition(v: number) { this.unwrap.startAtUnit = v; }
-
-    get duration(): number { return this.unwrap.durationUnit; }
-    set duration(v: number) { this.unwrap.durationUnit = v; }
-
-    get trackPosition(): number { return this.unwrap.midiIndex; }
-    set trackPosition(v: number) { this.unwrap.midiIndex = v; }
-}
 const toolContext: ToolContext = {
     createObject() {
         let note: ClippedNote = { midiIndex: 0, startAtUnit: 0, durationUnit: 0, velocity: 0.8 };
         const selectedClip = getEditingClip();
         if (selectedClip) selectedClip.notes.push(note);
-        return new NoteObject(note);
+        return new internal.NoteObject(note);
     },
     deleteObject(obj) {
         const selectedClip = getEditingClip();
@@ -91,9 +82,16 @@ const toolContext: ToolContext = {
         const selectedClip = getEditingClip();
         if (!selectedClip) return;
         let note = selectedClip.notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
-        return note? new NoteObject(note) : undefined;
+        return note? new internal.NoteObject(note) : undefined;
     },
-    selectObject(obj) {
+    clearSelection() {
+        // TODO
+    },
+    getSelection() {
+        // TODO
+        return [];
+    },
+    addSelection(obj) {
         // TODO
     },
     get snapSegmentSize() { return snap.value; }
@@ -281,6 +279,10 @@ watch(scrollY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys
 watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(zoomY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(pianoWidth, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+
+getWorkspace().rendering.registerCallback([RenderingHelper.Keys.SeekPointer], () => {
+    seekUpdateHandle.value++;
+});
 
 function onScroll(event: WheelEvent) {
     event.preventDefault();

@@ -81,8 +81,7 @@ onMounted(() => {
                 default: clipName = `<Unknown>`; break;
             }
 
-            const selected = getWorkspace().selectedClips[0] == clip;
-            
+            const selected = getWorkspace().selectedClips.has(clip);
             if (canvas.value!.offsetHeight > 30) {
                 renderer.fillRoundRect(clipX + 1, 1, clipWidth - 2, 12, 4, getTrack().trackColor ?? accent);
                 renderer.ctx.globalAlpha = 0.5;
@@ -247,7 +246,8 @@ async function onDrop(event: DragEvent) {
             stretchFactor: 1
         };
         getTrack().clips.push(clip);
-        getWorkspace().selectedClips[0] = clip;
+        getWorkspace().selectedClips.clear();
+        getWorkspace().selectedClips.add(clip);
         getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
     }
 

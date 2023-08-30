@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import MixeryWindow from '../windows/MixeryWindow.vue';
-import TitlebarButton from '../windows/TitlebarButton.vue';
-import MixeryIcon from '../icons/MixeryIcon.vue';
-import WindowToolsbar from '../windows/WindowToolsbar.vue';
-import PatternTrack from "./pattern/PatternTrack.vue";
-import FancyScrollbar from './universal/FancyScrollbar.vue';
+import MixeryWindow from '../../windows/MixeryWindow.vue';
+import TitlebarButton from '../../windows/TitlebarButton.vue';
+import MixeryIcon from '../../icons/MixeryIcon.vue';
+import WindowToolsbar from '../../windows/WindowToolsbar.vue';
+import PatternTrack from "../pattern/PatternTrack.vue";
+import FancyScrollbar from '../universal/FancyScrollbar.vue';
 import { Tools } from '@/handling/Tools';
 import { computed, ref, unref, type ComponentInternalInstance, toRaw, watch, nextTick } from 'vue';
 import { NoteClipNode, type Clip, type PlaylistTrack } from '@mixery/engine';
@@ -12,6 +12,7 @@ import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
+import { internal } from './PatternEditor.internal';
 
 const props = defineProps<{
     visible: boolean,
@@ -50,45 +51,12 @@ const snap = ref(96 / 8);
 const tools = Tools.LIST.map(v => v());
 const selectedTool = ref(tools[0]);
 
-class ClipObject implements ToolObject {
-    _track?: PlaylistTrack;
-
-    get startPosition(): number { return this.unwrap.startAtUnit; }
-    set startPosition(v: number) {
-        this.unwrap.startAtUnit = v;
-        if (this._track) {
-            seekPointer.value += 0.1;
-            nextTick(() => seekPointer.value -= 0.1);
-        }
-    }
-
-    get duration(): number { return this.unwrap.durationUnit; }
-    set duration(v: number) { this.unwrap.durationUnit = v; }
-
-    get trackPosition(): PlaylistTrack | undefined { return this._track; }
-    set trackPosition(v: PlaylistTrack | undefined) {
-        if (this._track) this._track.clips.splice(this._track.clips.indexOf(this.unwrap), 1);
-        
-        this._track = v;
-        if (v) v.clips.push(toRaw(this.unwrap));
-    }
-
-    constructor(
-        public readonly unwrap: Clip
-    ) {}
-}
-
-function setSelection(clip: Clip) {
-    getWorkspace().selectedClips[0] = clip;
-    if (clip.type == "notes") getWorkspace().editingNotesClip = clip;
-}
-
 const toolContext: ToolContext = {
     get snapSegmentSize() { return snap.value; },
     createObject() {
         const clipChannel = getWorkspace().selectedNode instanceof NoteClipNode
             ? (getWorkspace().selectedNode as NoteClipNode).data.channelName
-            : getWorkspace().selectedClips[0]?.type == "notes"? getWorkspace().selectedClips[0]?.clipChannel
+            : getWorkspace().editingNotesClip? getWorkspace().editingNotesClip!.clipChannel
             : "Default Channel";
 
         const clip: Clip = { // TODO automation clips and audio clips
@@ -99,28 +67,38 @@ const toolContext: ToolContext = {
             durationUnit: 0
         };
 
-        setSelection(clip);
-        return new ClipObject(clip);
+        return new internal.ClipObject(toRaw(clip));
     },
     deleteObject(obj) {
-        const obj2 = obj as ClipObject;
-        if (obj2._track) obj2._track.clips.splice(obj2._track.clips.indexOf(obj2.unwrap), 1);
+        const obj2 = obj as internal.ClipObject;
+        obj2.trackPosition = undefined;
     },
     hitTest(position, trackPosition) {
         let clip = (trackPosition as PlaylistTrack).clips.find(v => position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
 
         if (clip) {
-            let obj = new ClipObject(clip);
-            obj._track = trackPosition;
+            let obj = new internal.ClipObject(toRaw(clip));
+            obj._trackPosition = trackPosition;
             return obj;
         } else {
             return undefined;
         }
     },
-    selectObject(obj) {
-        setSelection(toRaw(obj.unwrap));
-        seekPointer.value += 0.1;
-        nextTick(() => seekPointer.value -= 0.1);
+    clearSelection() {
+        getWorkspace().selectedClips.clear();
+    },
+    addSelection(obj: internal.ClipObject) {
+        const raw = toRaw(obj.unwrap);
+        getWorkspace().selectedClips.add(raw);
+        if (raw.type == "notes") getWorkspace().editingNotesClip = raw;
+    },
+    getSelection() {
+        return [...getWorkspace().selectedClips].map(v => {
+            const view = new internal.ClipObject(v);
+            const track = getWorkspace().project.playlist.tracks.find(u => u.clips.includes(v));
+            view._trackPosition = track;
+            return view;
+        });
     },
 };
 

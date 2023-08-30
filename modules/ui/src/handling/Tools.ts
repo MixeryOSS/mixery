@@ -27,7 +27,8 @@ export namespace Tools {
 
             if (hitObj) {
                 this.moveMode = true;
-                context.selectObject(hitObj);
+                context.clearSelection();
+                context.addSelection(hitObj);
                 this.currentObj = hitObj;
                 this.lastPosition = position;
                 return;
@@ -37,6 +38,9 @@ export namespace Tools {
             this.currentObj.startPosition = position;
             this.currentObj.trackPosition = trackPosition;
             this.currentObj.duration = context.snapSegmentSize;
+
+            context.clearSelection();
+            context.addSelection(this.currentObj);
         }
 
         onMouseMove(context: ToolContext, buttons: number, position: number, trackPosition: any) {
@@ -116,7 +120,8 @@ export namespace Tools {
                     ? "both" : startDist < midDist
                     ? "left" : midDist < endDist? "move"
                     : "right";
-                context.selectObject(this.currentObj);
+                context.clearSelection();
+                context.addSelection(this.currentObj);
             }
         }
 
@@ -159,7 +164,8 @@ export namespace Tools {
             if (obj && buttons != 2) {
                 this.filling = false;
                 this.lastLength = obj.duration;
-                context.selectObject(obj);
+                context.clearSelection();
+                context.addSelection(obj);
             } else {
                 this.filling = true;
                 this.lastPosition = position;
