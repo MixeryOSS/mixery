@@ -1,3 +1,5 @@
+![Mixery screenshot](docs/screenshot_2023_08_31.png)
+
 # Mixery
 Welcome to Mixery, the free and open source digital audio workspace for the web.
 
