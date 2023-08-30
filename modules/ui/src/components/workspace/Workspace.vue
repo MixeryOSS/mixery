@@ -6,7 +6,6 @@ import WorkspaceToolsbarButton from "./WorkspaceToolsbarButton.vue";
 import MixeryIcon from "../icons/MixeryIcon.vue";
 import PianoRoll from "./PianoRoll.vue";
 import PatternEditor from "./PatternEditor.vue";
-import ExplorerEntry from "../workspace/explorer/ExplorerEntry.vue";
 import NodesEditor from "./NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
@@ -16,7 +15,7 @@ import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
 import { RenderingHelper } from "@/canvas/RenderingHelper";
-import { Units } from "@mixery/engine";
+import { Project, Units } from "@mixery/engine";
 
 const props = defineProps<{
     workspaceId: string
@@ -30,6 +29,7 @@ const contextMenuX = ref(0);
 const contextMenuY = ref(0);
 
 const updateThing = ref(0); // Dirty way to update
+const explorerPaneUpdateHandle = ref(0);
 const reactiveBpm = computed(() => {
     updateThing.value;
     return getWorkspace().project.bpm;
@@ -143,11 +143,29 @@ function flashMetronomeButton() {
 
 async function downloadProject() {
     const blob = await getWorkspace().project.saveToBlob();
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${getWorkspace().project.metadata.name ?? 'Untitled'}.mxry`;
+    a.download = `${getWorkspace().project.metadata.name ?? "Untitled"}.mxry`;
     a.click();
     URL.revokeObjectURL(a.href);
+}
+
+function openProject() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.click();
+    input.onchange = () => {
+        const file = input.files?.item(0); // You can only upload one
+        if (!file) return;
+        const project = new Project(getWorkspace().workspace);
+        getWorkspace().workspace.loadingManager.add(project
+            .loadFromBlob(file)
+            .then(() => {
+                getWorkspace().setProject(project);
+                explorerPaneUpdateHandle.value++;
+            })
+        );
+    };
 }
 
 getWorkspace().workspace.metronome.node?.midiIn.onNoteEvent.listen(note => {
@@ -181,6 +199,10 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
             ><MixeryIcon type="mixery" /></WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton
                 @click="openToolsbarContextMenu($event, [
+                    {
+                        label: 'Open Project...',
+                        onClick() { openProject(); },
+                    },
                     {
                         label: 'Download Project',
                         onClick() { getWorkspace().workspace.loadingManager.add(downloadProject()) },
@@ -232,7 +254,7 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
         </div>
         <div class="vertical-flex">
             <Suspense>
-                <ExplorerPane :workspace-id="props.workspaceId" />
+                <ExplorerPane :workspace-id="props.workspaceId" :update-handle="explorerPaneUpdateHandle" />
             </Suspense>
             <WindowsContainer class="wcontainer">
                 <PatternEditor

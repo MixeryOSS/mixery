@@ -29,4 +29,23 @@ export namespace ResourcesBundler {
             path: []
         }))).children;
     }
+
+    export async function putResource(store: IResourcesStore, current: Resource) {
+        if (current.file) await store.putResource({
+            namespace: store.namespace,
+            path: structuredClone(current.path)
+        }, current.file);
+
+        if (current.children) {
+            await store.putFolder({
+                namespace: store.namespace,
+                path: structuredClone(current.path)
+            });
+            await Promise.all(current.children.map(child => putResource(store, child)));
+        }
+    }
+
+    export async function apply(store: IResourcesStore, bundle: Resource[]) {
+        await Promise.all(bundle.map(v => putResource(store, v)));
+    }
 }

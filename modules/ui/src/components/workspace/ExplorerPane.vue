@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useTrackableXY } from '../composes';
-import MixeryIcon from '../icons/MixeryIcon.vue';
 import ExplorerEntry from './explorer/ExplorerEntry.vue';
 import { MixeryUI } from '@/handling/MixeryUI';
 import type { IResource } from '@mixery/engine';
 
 const props = defineProps<{
-    workspaceId: string
+    workspaceId: string,
+    updateHandle: number
 }>();
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
@@ -20,14 +20,24 @@ interface ResourceHolder {
 const width = ref(300);
 const root = ref<HTMLDivElement>();
 const resizer = ref<HTMLDivElement>();
-const content = ref<ResourceHolder[]>([
-    {
-        label: "Project Resources",
-        resource: await getWorkspace().project.projectResources.getResource({namespace: "project", path: []})
-    }
-]);
+const content = ref<ResourceHolder[]>([]);
+const updateHandle = computed(() => props.updateHandle)
+
+async function setExplorerContent() {
+    content.value = [
+        {
+            label: "Project Resources",
+            resource: await getWorkspace().project.projectResources.getResource({namespace: "project", path: []})
+        }
+    ];
+}
 
 watch(width, v => root.value!.style.width = `${v}px`);
+watch(updateHandle, () => {
+    content.value = [];
+    nextTick(() => setExplorerContent());
+});
+setExplorerContent();
 
 onMounted(() => {
     root.value!.style.width = `${width.value}px`;

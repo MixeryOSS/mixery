@@ -47,6 +47,7 @@ export class Project {
         this.bpm = saved.bpm;
         this.nodes = new NodesNetwork().load(saved.nodes, this.workspace);
         this.playlist = structuredClone(saved.playlist);
+        await ResourcesBundler.apply(this.projectResources, saved.resources);
     }
 
     async loadFromBlob(blob: Blob) {
