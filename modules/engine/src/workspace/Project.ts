@@ -1,4 +1,5 @@
-import { IResourcesStore, MemoryResourcesStore } from "../index.js";
+import { ReadableWebStream, WritableBlobStream } from "@mixery/blobson";
+import { IResourcesStore, MemoryResourcesStore, ResourcesBundler } from "../index.js";
 import { NodesNetwork, SavedNodesNetwork } from "../nodes/NodesNetwork.js";
 import { Playlist } from "../playlist/Playlist.js";
 import { ResourcesManager } from "../resources/ResourcesManager.js";
@@ -22,22 +23,37 @@ export class Project {
         this.resourcesManager = new ResourcesManager(this, workspace.loadingManager);
     }
 
-    save() {
+    async saveToObject() {
         let saved: SavedProject = {
             metadata: structuredClone(this.metadata),
             bpm: this.bpm,
             nodes: this.nodes.save(),
             playlist: structuredClone(this.playlist),
+            resources: await ResourcesBundler.bundle(this.projectResources)
         };
 
         return saved;
     }
 
-    load(saved: SavedProject) {
+    async saveToBlob() {
+        const stream = new WritableBlobStream();
+        stream.writeString("Mixery Project v1");
+        stream.writeObject(await this.saveToObject());
+        return stream.toBlob({ type: "application/x.mixery.project" });
+    }
+
+    async loadFromObject(saved: SavedProject) {
         this.metadata = structuredClone(saved.metadata);
         this.bpm = saved.bpm;
         this.nodes = new NodesNetwork().load(saved.nodes, this.workspace);
         this.playlist = structuredClone(saved.playlist);
+    }
+
+    async loadFromBlob(blob: Blob) {
+        const stream = new ReadableWebStream(blob.stream());
+        const signature = await stream.readString();
+        const savedData: SavedProject = await stream.readObject();
+        await this.loadFromObject(savedData);
     }
 }
 
@@ -52,5 +68,5 @@ export interface SavedProject {
     bpm: number;
     nodes: SavedNodesNetwork;
     playlist: Playlist;
-    // TODO resources;
+    resources: ResourcesBundler.Resource[];
 }

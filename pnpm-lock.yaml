@@ -15,6 +15,10 @@ importers:
         version: 5.1.6
 
   modules/engine:
+    dependencies:
+      '@mixery/blobson':
+        specifier: workspace:*
+        version: link:../blobson
     devDependencies:
       typescript:
         specifier: ~5.1.6

@@ -1,5 +1,4 @@
 import { Workspace } from "../index.js";
-import { IReadonlyRegistry } from "../misc/Registries.js";
 import { Identifier } from "../types.js";
 import { IPort } from "./ports/IPort.js";
 
@@ -38,8 +37,9 @@ export interface INode<T extends INode<T, TData>, TData> {
     getOutputPorts(): IPort<any>[];
 
     /**
-     * Save node into an object. The object must be able to serialized into JSON string and can
-     * be deserialized from JSON.
+     * Save node into an object. The object must be able to serialized by Mixery Blobson, which
+     * means you can't use custom class like `MyNodeDataClass`, but you can use `Blob`,
+     * `ArrayBuffer` and `TypedArray` (like `Uint8Array` for example).
      */
     saveNode(): TData;
 }

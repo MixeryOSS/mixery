@@ -141,6 +141,15 @@ function flashMetronomeButton() {
     });
 }
 
+async function downloadProject() {
+    const blob = await getWorkspace().project.saveToBlob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${getWorkspace().project.metadata.name ?? 'Untitled'}.mxry`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
 getWorkspace().workspace.metronome.node?.midiIn.onNoteEvent.listen(note => {
     if (note.signalType == "instant") flashMetronomeButton();
     else if (note.signalType == "delayed") setTimeout(() => flashMetronomeButton(), note.delayMs);
@@ -170,7 +179,16 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                     }
                 ])"
             ><MixeryIcon type="mixery" /></WorkspaceToolsbarButton>
-            <WorkspaceToolsbarButton>File</WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton
+                @click="openToolsbarContextMenu($event, [
+                    {
+                        label: 'Download Project',
+                        onClick() { getWorkspace().workspace.loadingManager.add(downloadProject()) },
+                    }
+                ])"
+            >
+                File
+            </WorkspaceToolsbarButton>
             <WorkspaceToolsbarButton
                 @click="openToolsbarContextMenu($event, [
                     {

@@ -28,6 +28,7 @@ export * from "./playlist/Playlist.js";
 
 export * from "./resources/IResource.js";
 export * from "./resources/ResourcePath.js";
+export * from "./resources/ResourcesBundler.js";
 export * from "./resources/ResourcesManager.js";
 export * from "./resources/store/IResourcesStore.js";
 export * from "./resources/store/MemoryResourcesStore.js";

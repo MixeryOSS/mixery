@@ -93,6 +93,8 @@ export namespace MixeryUI {
                 this.player = new Player(project);
                 this.selectedNode = undefined;
                 // TODO selectedClip
+                
+                this.rendering.redrawRequest(RenderingHelper.Keys.All);
             },
         };
 
