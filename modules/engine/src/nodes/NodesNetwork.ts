@@ -1,4 +1,4 @@
-import { IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Workspace } from "../index.js";
+import { AudioClipNode, IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Workspace } from "../index.js";
 import { INode } from "./INode.js";
 
 export class NodesNetwork {
@@ -44,6 +44,11 @@ export class NodesNetwork {
         const node = this.nodes.find(v => v instanceof NoteClipNode && v.data.channelName == channel);
         if (!node) return false;
         ((node as NoteClipNode).outputs[0] as MidiPort).emitNote(event);
+    }
+
+    getAudioSourceNode(channel: string) {
+        const node = this.nodes.find(v => v instanceof AudioClipNode && v.data.channelName == channel);
+        return node as AudioClipNode;
     }
 
     save() {
