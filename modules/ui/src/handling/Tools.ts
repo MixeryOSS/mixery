@@ -155,15 +155,16 @@ export namespace Tools {
     export class Brush implements ITool {
         toolName: string = "Brush";
         icon = "brush";
-        lastLength = 0;
-        lastPosition = 0;
+        replicate: ToolObject | undefined;
+        lastPosition: number = -1;
         filling = false;
 
         onMouseDown(context: ToolContext, buttons: number, position: number, trackPosition: any) {
             let obj = context.hitTest(position, trackPosition);
             if (obj && buttons != 2) {
                 this.filling = false;
-                this.lastLength = obj.duration;
+                this.replicate = obj.createCopy();
+                this.replicate.trackPosition = undefined;
                 context.clearSelection();
                 context.addSelection(obj);
             } else {
@@ -188,14 +189,19 @@ export namespace Tools {
                 return;
             }
 
-            const length = Math.max(this.lastLength, context.snapSegmentSize);
+            if (!this.replicate) {
+                this.replicate = context.createObject();
+                this.replicate.startPosition = 0;
+                this.replicate.duration = context.snapSegmentSize;
+            }
+
+            const length = Math.max(this.replicate.duration, context.snapSegmentSize);
             const start = Math.floor((position - this.lastPosition) / length) * length + this.lastPosition;
             if (start < 0) return;
             const end = start + length;
             if (context.hitTest(start, trackPosition) || context.hitTest(end - 0.1, trackPosition)) return;
 
-            // TODO add context.cloneObject();
-            let obj = context.createObject();
+            let obj = this.replicate.createCopy();
             obj.startPosition = start;
             obj.duration = end - start;
             obj.trackPosition = trackPosition;

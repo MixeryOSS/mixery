@@ -104,7 +104,7 @@ const toolContext: ToolContext = {
 
 function onCanvasMouseDown(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
-    selectedTool.value.onMouseDown(toolContext, event.buttons, position, track);
+    toRaw(selectedTool.value).onMouseDown(toolContext, event.buttons, position, track);
     getWorkspace().rendering.redrawRequest(
         RenderingHelper.Keys.PatternsEditor,
         RenderingHelper.Keys.SeekPointer
@@ -112,7 +112,7 @@ function onCanvasMouseDown(track: PlaylistTrack, event: PointerEvent) {
 }
 function onCanvasMouseMove(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
-    selectedTool.value.onMouseMove(toolContext, event.buttons, position, track);
+    toRaw(selectedTool.value).onMouseMove(toolContext, event.buttons, position, track);
     getWorkspace().rendering.redrawRequest(
         RenderingHelper.Keys.PatternsEditor,
         RenderingHelper.Keys.SeekPointer
@@ -120,7 +120,7 @@ function onCanvasMouseMove(track: PlaylistTrack, event: PointerEvent) {
 }
 function onCanvasMouseUp(track: PlaylistTrack, event: PointerEvent) {
     const position = Snapper.snap(event.offsetX / zoomX.value * 96 + scrollX.value, snap.value);
-    selectedTool.value.onMouseUp(toolContext, event.buttons, position, track);
+    toRaw(selectedTool.value).onMouseUp(toolContext, event.buttons, position, track);
     getWorkspace().rendering.redrawRequest(
         RenderingHelper.Keys.PatternsEditor,
         RenderingHelper.Keys.SeekPointer

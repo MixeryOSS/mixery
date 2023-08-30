@@ -18,6 +18,7 @@ export namespace internal {
 
         get trackPosition() { return this._trackPosition; }
         set trackPosition(v) {
+            v = toRaw(v);
             const raw = toRaw(this.unwrap);
             if (this._trackPosition) this._trackPosition.clips.splice(this._trackPosition.clips.indexOf(raw), 1);
             this._trackPosition = v;
@@ -25,9 +26,9 @@ export namespace internal {
         }
 
         createCopy(): ClipObject {
-            const cloned = structuredClone(this.unwrap);
+            const cloned = structuredClone(toRaw(this.unwrap));
             const copy = new ClipObject(cloned);
-            if (this._trackPosition) copy.trackPosition = this._trackPosition;
+            copy.trackPosition = toRaw(this._trackPosition);
             return copy;
         }
     }
