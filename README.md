@@ -10,17 +10,12 @@ This is the monorepo for Mixery, using pnpm workspace. Other repositories that p
     + Assuming you are using Chromium browsers like MS Edge or Google Chrome or something like that
 - MIDI editor (a.k.a "piano roll") and patterns editor.
 
-## Quick start
-_Not available yet, come back later ;)_
+## Modules
+> All modules are located in `/modules`
 
-### Development "mode"
-You can start a server by starting Vue dev server inside `modules/ui`:
-
-```console
-$ cd modules/ui
-$ pnpm install
-$ pnpm dev
-```
+- `engine` (`@mixery/engine`): The Mixery engine. This one is designed to not use any front-end frameworks, so you can buld your own user interface that rely on Mixery Engine. An example is an easy version of Mixery, with nodes editor being replaced by generators rack and each playlist track attaches to a channel in nodes network.
+- `blobson` (`@mixery/blobson`): The objects serialization module, created to store special objects where JSON can't be used, something like `TypedArray` or `Blob`. Mainly used for saving project data with embedded resources.
+- `ui` (`@mixery/ui`): The user interface for Mixery. Currently we are deploying webapp by building this module, but in the future, this will be marked as "components library" and the actual webapp will be located in `@mixery/app`.
 
 ## Shortcuts n' keys (in most scenarios)
 - Hold Shift to swap between X axis and Y axis while scrolling (so if you are on desktop, hold Shift while scrolling to scroll horizontally).
