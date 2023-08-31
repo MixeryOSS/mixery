@@ -97,6 +97,7 @@ function getPortColor(type: string) {
     switch (type) {
         case "mixery:midi": return "#ffaf5c";
         case "mixery:signal": return "#c187ff";
+        case "mixery:group_placeholder_port": return "#7f7f7f";
         default: return "#ff5c5c";
     }
 }
@@ -155,10 +156,14 @@ onMounted(() => {
             const portName = port.portName ?? port.portId;
             const textWidth = renderer.ctx.measureText(portName).width;
             const portColor = getPortColor(port.type);
+            const portStroke = "#000000";
+            const portLabelStroke = port.type == "mixery:group_placeholder_port"? "#ffffff" : "#00000000";
 
             renderer.ctx.globalAlpha = 0.35;
-            renderer.fillRoundRect(x + 4, y, width - 8, 16, 4, portColor);
+            renderer.begin().roundRect(x + 4, y, width - 8, 16, 4).fill(portColor);
             renderer.ctx.globalAlpha = 1;
+            renderer.stroke(portLabelStroke, 1.2).end();
+
             renderer.fillText(portName, x + (type == "output"? (width - textWidth - 8) : 8), y + 12, "12px Nunito Sans", "#ffffff");
 
             let tX = 0;
@@ -171,7 +176,7 @@ onMounted(() => {
             renderer.ctx.translate(x + tX, y + 4);
             renderer.begin().roundRect(0, 0, 4, 8, 1)
             .fill(portColor)
-            .stroke("#000000", 1)
+            .stroke(portStroke, 1)
             .end();
             renderer.ctx.translate(-x - tX, -y - 4);
 
@@ -266,7 +271,7 @@ function addNode(event: MouseEvent) {
     const entries: ContextMenuEntry[] = [];
     getWorkspace().workspace.registries.nodeFactories.forEach((id, factory) => {
         if (factory.hidden) return;
-        
+
         entries.push({
             label: factory.label,
             async onClick() {
@@ -540,9 +545,9 @@ function navigateUp(index: number) {
         </template>
         <template v-slot:toolsbars v-if="groupsStackRef.length > 1">
             <WindowToolsbar>
-                <TitlebarButton @click="navigateUp(getWorkspace().nodesStack.length - 2)">&lt; Up</TitlebarButton>
+                <TitlebarButton @click="navigateUp(getWorkspace().nodesStack.length - 2)">..</TitlebarButton>
                 <template v-for="(name, index) in groupsStackRef">
-                    <TitlebarButton @click="navigateUp(index)">{{ name }}</TitlebarButton>
+                    <TitlebarButton @click="navigateUp(index)" :highlight="index == groupsStackRef.length - 1">{{ name }}</TitlebarButton>
                 </template>
             </WindowToolsbar>
         </template>
