@@ -192,11 +192,29 @@ onMounted(() => {
             
             const selected = node == getWorkspace().selectedNode;
             const nodeName = node.nodeName ?? node.typeId;
+
+            if (node.typeId == GroupNode.ID) {
+                for (let i = 6; i >= 0; i -= 3) {
+                    renderer.ctx.translate(-i, -i);
+                    renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).fill("#1f1f1f").end();
+                    renderer.fillRoundRect(renderX, renderY, renderWidth, 16, 4, "#4f4f4f");
+                    renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).stroke("#7f7f7f", 1).end();
+                    renderer.ctx.translate(i, i);
+                }
+            }
             
             renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).fill("#1f1f1f").end();
             renderer.fillRoundRect(renderX, renderY, renderWidth, 16, 4, "#4f4f4f");
             renderer.fillText(nodeName, renderX + 4, renderY + 12, "12px Nunito Sans", "#ffffff");
             renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).stroke(selected? "#ffffff" : "#7f7f7f", selected? 2 : 1).end();
+
+            if (node.typeId == GroupNode.ID) {
+                renderer.begin()
+                .rect(renderX + renderWidth - 12 + 0.5, renderY + 4 + 0.5, 6, 6)
+                .rect(renderX + renderWidth - 14 + 0.5, renderY + 6 + 0.5, 6, 6)
+                .stroke("#ffffff", 1)
+                .end();
+            }
 
             let currentY = renderY + 20;
             inputs.forEach(port => currentY = drawPort(port, "input", renderWidth, renderX, currentY));
@@ -575,6 +593,9 @@ function navigateUp(index: number) {
                 :value="selectedNodeRefForRendering? (selectedNodeRefForRendering.nodeName ?? selectedNodeRefForRendering.typeId) : 'Not selected'"
                 @input="getWorkspace().selectedNode? (getWorkspace().selectedNode!.nodeName = ($event.target as any).value) : 1; getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
             >
+            <div class="node-control-entry" v-if="selectedNodeRefForRendering?.typeId == GroupNode.ID">
+                <div class="node-control-label">Double-click to open</div>
+            </div>
             <div class="node-control-entry" v-for="control in (selectedNodeRefForRendering?.getControls() ?? [])">
                 <div class="node-control-label">{{ control.label }}</div>
                 <input
