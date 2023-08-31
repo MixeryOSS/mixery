@@ -1,4 +1,4 @@
-import { AudioClipNode, IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Project, Workspace } from "../index.js";
+import { AudioClipNode, IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Project } from "../index.js";
 import { INode } from "./INode.js";
 
 export class NodesNetwork {
@@ -72,7 +72,7 @@ export class NodesNetwork {
     async load(saved: SavedNodesNetwork, project: Project) {
         this.connections = structuredClone(saved.connections);
 
-        Object.keys(saved.nodes).map(async nodeId => {
+        await Promise.all(Object.keys(saved.nodes).map(async nodeId => {
             let savedNode = saved.nodes[nodeId];
             let factory = project.workspace.registries.nodeFactories.get(savedNode.nodeType);
             if (!factory) {
@@ -89,7 +89,7 @@ export class NodesNetwork {
             node.nodeX = savedNode.nodeX;
             node.nodeY = savedNode.nodeY;
             this.nodes.push(node);
-        });
+        }));
 
         this.connections.forEach(c => {
             let fromNode = this.nodes.find(v => v.nodeId == c.from[0]);
