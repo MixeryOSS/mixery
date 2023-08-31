@@ -257,7 +257,7 @@ function addNode(event: MouseEvent) {
         entries.push({
             label: factory.label,
             onClick() {
-                const node = factory.createNew(getWorkspace().workspace, getNodes().generateNodeId()) as INode<any, any>;
+                const node = factory.createNew(getWorkspace().project, getNodes().generateNodeId()) as INode<any, any>;
                 node.nodeX = -x.value - node.nodeWidth / 2;
                 node.nodeY = -y.value;
                 getWorkspace().selectedNode = node;

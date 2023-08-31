@@ -1,4 +1,4 @@
-import { Workspace } from "../index.js";
+import { Project, Workspace } from "../index.js";
 import { Identifier } from "../types.js";
 import { IPort } from "./ports/IPort.js";
 
@@ -45,12 +45,12 @@ export interface INode<T extends INode<T, TData>, TData> {
 }
 
 export type NewNodeFactory<T extends INode<T, TData>, TData> = (
-    workspace: Workspace,
+    project: Project,
     nodeId: string
 ) => T;
 
 export type NodeFromDataFactory<T extends INode<T, TData>, TData> = (
-    workspace: Workspace,
+    project: Project,
     nodeId: string,
     data: TData
 ) => T;

@@ -61,11 +61,11 @@ export class AudioClipNode implements INode<AudioClipNode, AudioClipNodeData> {
         return {
             typeId: AudioClipNode.ID,
             label: "Audio Clip Input",
-            createNew(workspace, nodeId) {
-                return new AudioClipNode(nodeId, workspace.audio);
+            createNew(project, nodeId) {
+                return new AudioClipNode(nodeId, project.workspace.audio);
             },
-            createExisting(workspace, nodeId, data) {
-                const node = new AudioClipNode(nodeId, workspace.audio);
+            createExisting(project, nodeId, data) {
+                const node = new AudioClipNode(nodeId, project.workspace.audio);
                 node.data = structuredClone(data);
                 return node;
             }

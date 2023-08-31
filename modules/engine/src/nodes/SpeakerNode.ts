@@ -41,11 +41,11 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
         return {
             typeId: SpeakerNode.ID,
             label: "Speaker Output",
-            createNew(workspace, nodeId) {
-                return new SpeakerNode(nodeId, workspace.audio);
+            createNew(project, nodeId) {
+                return new SpeakerNode(nodeId, project.workspace.audio);
             },
-            createExisting(workspace, nodeId, data) {
-                return new SpeakerNode(nodeId, workspace.audio);
+            createExisting(project, nodeId, data) {
+                return new SpeakerNode(nodeId, project.workspace.audio);
             }
         };
     }

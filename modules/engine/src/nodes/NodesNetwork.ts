@@ -1,4 +1,4 @@
-import { AudioClipNode, IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Workspace } from "../index.js";
+import { AudioClipNode, IPort, Identifier, MidiPort, Note, NoteClipNode, PortsConnection, Project, Workspace } from "../index.js";
 import { INode } from "./INode.js";
 
 export class NodesNetwork {
@@ -69,19 +69,19 @@ export class NodesNetwork {
         return saved;
     }
 
-    load(saved: SavedNodesNetwork, workspace: Workspace) {
+    load(saved: SavedNodesNetwork, project: Project) {
         this.connections = structuredClone(saved.connections);
 
         Object.keys(saved.nodes).forEach(nodeId => {
             let savedNode = saved.nodes[nodeId];
-            let factory = workspace.registries.nodeFactories.get(savedNode.nodeType);
+            let factory = project.workspace.registries.nodeFactories.get(savedNode.nodeType);
             if (!factory) {
                 console.warn(`[NodesNetwork] Unable to load ${savedNode.nodeType}: Unknown type`);
                 return;
             }
 
             let node = factory.createExisting(
-                workspace,
+                project,
                 nodeId,
                 savedNode.data
             );

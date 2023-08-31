@@ -45,12 +45,13 @@ export class Project {
     async loadFromObject(saved: SavedProject) {
         this.metadata = structuredClone(saved.metadata);
         this.bpm = saved.bpm;
-        this.nodes = new NodesNetwork().load(saved.nodes, this.workspace);
+        this.nodes = new NodesNetwork().load(saved.nodes, this);
         this.playlist = structuredClone(saved.playlist);
         await ResourcesBundler.apply(this.projectResources, saved.resources);
     }
 
     async loadFromBlob(blob: Blob) {
+        // TODO move this to "global Mixery file reader" thing
         const stream = new ReadableWebStream(blob.stream());
         const signature = await stream.readString();
         const savedData: SavedProject = await stream.readObject();

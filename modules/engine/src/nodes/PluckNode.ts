@@ -84,11 +84,11 @@ export class PluckNode implements INode<PluckNode, any> {
         return {
             typeId: PluckNode.ID,
             label: "Pluck",
-            createNew(workspace, nodeId) {
-                return new PluckNode(nodeId, workspace.audio);
+            createNew(project, nodeId) {
+                return new PluckNode(nodeId, project.workspace.audio);
             },
-            createExisting(workspace, nodeId, data) {
-                const node = new PluckNode(nodeId, workspace.audio);
+            createExisting(project, nodeId, data) {
+                const node = new PluckNode(nodeId, project.workspace.audio);
                 node.data = data;
                 return node;
             }
