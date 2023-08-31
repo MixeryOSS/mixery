@@ -256,8 +256,10 @@ function addNode(event: MouseEvent) {
     getWorkspace().workspace.registries.nodeFactories.forEach((id, factory) => {
         entries.push({
             label: factory.label,
-            onClick() {
-                const node = factory.createNew(getWorkspace().project, getNodes().generateNodeId()) as INode<any, any>;
+            async onClick() {
+                const createTask = factory.createNew(getWorkspace().project, getNodes().generateNodeId());
+                if (createTask instanceof Promise) getWorkspace().workspace.loadingManager.add(createTask);
+                const node = (await createTask) as INode<any, any>;
                 node.nodeX = -x.value - node.nodeWidth / 2;
                 node.nodeY = -y.value;
                 getWorkspace().selectedNode = node;

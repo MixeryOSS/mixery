@@ -45,9 +45,9 @@ export class Project {
     async loadFromObject(saved: SavedProject) {
         this.metadata = structuredClone(saved.metadata);
         this.bpm = saved.bpm;
-        this.nodes = new NodesNetwork().load(saved.nodes, this);
-        this.playlist = structuredClone(saved.playlist);
         await ResourcesBundler.apply(this.projectResources, saved.resources);
+        this.nodes = await new NodesNetwork().load(saved.nodes, this);
+        this.playlist = structuredClone(saved.playlist);
     }
 
     async loadFromBlob(blob: Blob) {

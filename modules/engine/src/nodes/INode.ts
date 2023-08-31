@@ -47,13 +47,13 @@ export interface INode<T extends INode<T, TData>, TData> {
 export type NewNodeFactory<T extends INode<T, TData>, TData> = (
     project: Project,
     nodeId: string
-) => T;
+) => T | Promise<T>;
 
 export type NodeFromDataFactory<T extends INode<T, TData>, TData> = (
     project: Project,
     nodeId: string,
     data: TData
-) => T;
+) => T | Promise<T>;
 
 /**
  * Node factory. Used for constructing a brand new node or load node from data.

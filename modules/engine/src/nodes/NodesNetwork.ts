@@ -69,10 +69,10 @@ export class NodesNetwork {
         return saved;
     }
 
-    load(saved: SavedNodesNetwork, project: Project) {
+    async load(saved: SavedNodesNetwork, project: Project) {
         this.connections = structuredClone(saved.connections);
 
-        Object.keys(saved.nodes).forEach(nodeId => {
+        Object.keys(saved.nodes).map(async nodeId => {
             let savedNode = saved.nodes[nodeId];
             let factory = project.workspace.registries.nodeFactories.get(savedNode.nodeType);
             if (!factory) {
@@ -80,11 +80,12 @@ export class NodesNetwork {
                 return;
             }
 
-            let node = factory.createExisting(
+            let node = await factory.createExisting(
                 project,
                 nodeId,
                 savedNode.data
             );
+            
             node.nodeX = savedNode.nodeX;
             node.nodeY = savedNode.nodeY;
             this.nodes.push(node);
