@@ -9,10 +9,10 @@ export * from "./misc/Temperaments.js";
 export * from "./misc/Units.js";
 export * from "./misc/Waveforms.js";
 
-export * from "./nodes/AudioClipNode.js";
+export * from "./nodes/AudioSourceNode.js";
 export * from "./nodes/INode.js";
 export * from "./nodes/NodesNetwork.js";
-export * from "./nodes/NoteClipNode.js";
+export * from "./nodes/NotesSourceNode.js";
 export * from "./nodes/PluckNode.js";
 export * from "./nodes/SpeakerNode.js";
 

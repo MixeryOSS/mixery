@@ -1,5 +1,5 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
-import { Project, Workspace, type PlaylistTrack, type Clip, Player, type INode, NoteClipNode, SpeakerNode, PluckNode, AudioClipNode, type NotesClip } from "@mixery/engine";
+import { Project, Workspace, type Clip, Player, type INode, SpeakerNode, PluckNode, type NotesClip, AudioSourceNode, NotesSourceNode } from "@mixery/engine";
 
 export namespace MixeryUI {
     /**
@@ -14,10 +14,10 @@ export namespace MixeryUI {
         for (let i = 0; i < 9; i++) project.playlist.tracks.push({ trackName: `Track ${i + 1}`, clips: [], isMuted: false, trackHeight: 40 });
 
         // Nodes network
-        const audioInputNode = new AudioClipNode(project.nodes.generateNodeId(), ws.audio);
+        const audioInputNode = new AudioSourceNode(project.nodes.generateNodeId(), ws.audio);
         audioInputNode.data.channelName = "Default Channel";
         audioInputNode.nodeY = -100;
-        const midiInputNode = new NoteClipNode(project.nodes.generateNodeId());
+        const midiInputNode = new NotesSourceNode(project.nodes.generateNodeId());
         midiInputNode.data.channelName = "Default Channel";
         const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
         pluckNode.nodeX = 150;

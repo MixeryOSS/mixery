@@ -1,19 +1,19 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort } from "../index.js";
 import { INode, NodeControl, NodeFactory } from "./INode.js";
 
-interface NoteClipNodeData {
+interface NotesSourceNodeData {
     channelName: string;
 }
 
-export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
-    static readonly ID = "mixery:note_clip";
-    typeId: Identifier = NoteClipNode.ID;
-    nodeName?: string = "Notes Clip Input";
+export class NotesSourceNode implements INode<NotesSourceNode, NotesSourceNodeData> {
+    static readonly ID = "mixery:notes_source";
+    typeId: Identifier = NotesSourceNode.ID;
+    nodeName?: string = "Notes Source";
     nodeX = 0;
     nodeY = 0;
     nodeWidth = 100;
 
-    data: NoteClipNodeData = {
+    data: NotesSourceNodeData = {
         channelName: "Default Channel"
     };
 
@@ -26,7 +26,7 @@ export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
     constructor(readonly nodeId: string) {
         const self = this;
         this.controls.push({
-            label: "Clip Channel",
+            label: "Channel",
             get value(): string { return self.data.channelName; },
             set value(v: string) { self.data.channelName = v; }
         });
@@ -47,19 +47,19 @@ export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
         return this.outputs;
     }
 
-    saveNode(): NoteClipNodeData {
+    saveNode(): NotesSourceNodeData {
         return structuredClone(this.data);
     }
 
-    static createFactory(): NodeFactory<NoteClipNode, NoteClipNodeData> {
+    static createFactory(): NodeFactory<NotesSourceNode, NotesSourceNodeData> {
         return {
-            typeId: NoteClipNode.ID,
-            label: "Notes Clip Input",
+            typeId: NotesSourceNode.ID,
+            label: "Notes Source",
             createNew(workspace, nodeId) {
-                return new NoteClipNode(nodeId);
+                return new NotesSourceNode(nodeId);
             },
             createExisting(workspace, nodeId, data) {
-                const node = new NoteClipNode(nodeId);
+                const node = new NotesSourceNode(nodeId);
                 node.data = structuredClone(data);
                 return node;
             }
@@ -67,4 +67,4 @@ export class NoteClipNode implements INode<NoteClipNode, NoteClipNodeData> {
     }
 }
 
-GlobalRegistries.NODE_FACTORIES.register(NoteClipNode.ID, NoteClipNode.createFactory());
+GlobalRegistries.NODE_FACTORIES.register(NotesSourceNode.ID, NotesSourceNode.createFactory());

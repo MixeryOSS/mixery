@@ -1,19 +1,19 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort, Workspace } from "../index.js";
 import { INode, NodeControl, NodeFactory } from "./INode.js";
 
-interface AudioClipNodeData {
+interface AudioSourceNodeData {
     channelName: string;
 }
 
-export class AudioClipNode implements INode<AudioClipNode, AudioClipNodeData> {
-    static readonly ID = "mixery:audio_clip";
-    typeId: Identifier = AudioClipNode.ID;
-    nodeName?: string = "Audio Clip Input";
+export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeData> {
+    static readonly ID = "mixery:audio_source";
+    typeId: Identifier = AudioSourceNode.ID;
+    nodeName?: string = "Audio Source";
     nodeX = 0;
     nodeY = 0;
     nodeWidth = 100;
 
-    data: AudioClipNodeData = {
+    data: AudioSourceNodeData = {
         channelName: "Default Channel"
     };
 
@@ -27,13 +27,13 @@ export class AudioClipNode implements INode<AudioClipNode, AudioClipNodeData> {
     constructor(readonly nodeId: string, audio: BaseAudioContext) {
         const self = this;
         this.controls.push({
-            label: "Clip Channel",
+            label: "Channel",
             get value(): string { return self.data.channelName; },
             set value(v: string) { self.data.channelName = v; }
         });
 
         this.audioOut = new SignalPort(this, "audioOut", audio.createGain());
-        this.audioOut.portName = "Audio";
+        this.audioOut.portName = "Output";
         this.outputs.push(this.audioOut);
 
         this.audioGain = new SignalPort(this, "audioGain", (this.audioOut.socket as GainNode).gain);
@@ -53,19 +53,19 @@ export class AudioClipNode implements INode<AudioClipNode, AudioClipNodeData> {
         return this.outputs;
     }
 
-    saveNode(): AudioClipNodeData {
+    saveNode(): AudioSourceNodeData {
         return structuredClone(this.data);
     }
 
-    static createFactory(): NodeFactory<AudioClipNode, AudioClipNodeData> {
+    static createFactory(): NodeFactory<AudioSourceNode, AudioSourceNodeData> {
         return {
-            typeId: AudioClipNode.ID,
-            label: "Audio Clip Input",
+            typeId: AudioSourceNode.ID,
+            label: "Audio Source",
             createNew(project, nodeId) {
-                return new AudioClipNode(nodeId, project.workspace.audio);
+                return new AudioSourceNode(nodeId, project.workspace.audio);
             },
             createExisting(project, nodeId, data) {
-                const node = new AudioClipNode(nodeId, project.workspace.audio);
+                const node = new AudioSourceNode(nodeId, project.workspace.audio);
                 node.data = structuredClone(data);
                 return node;
             }
@@ -73,4 +73,4 @@ export class AudioClipNode implements INode<AudioClipNode, AudioClipNodeData> {
     }
 }
 
-GlobalRegistries.NODE_FACTORIES.register(AudioClipNode.ID, AudioClipNode.createFactory());
+GlobalRegistries.NODE_FACTORIES.register(AudioSourceNode.ID, AudioSourceNode.createFactory());

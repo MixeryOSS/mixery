@@ -3,7 +3,7 @@ import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { Snapper } from '@/handling/Snapper';
-import { Units, type ClippedNote, type ResourcePath, type AudioClip, AudioClipNode } from '@mixery/engine';
+import { Units, type ClippedNote, type ResourcePath, type AudioClip, AudioSourceNode } from '@mixery/engine';
 import { computed, nextTick, onMounted, ref } from 'vue';
 
 const props = defineProps<{
@@ -236,8 +236,8 @@ async function onDrop(event: DragEvent) {
     if (handle.audioBuffer) {
         const clip: AudioClip = {
             type: "audio",
-            clipChannel: getWorkspace().selectedNode instanceof AudioClipNode
-                ? (getWorkspace().selectedNode as AudioClipNode).data.channelName
+            clipChannel: getWorkspace().selectedNode instanceof AudioSourceNode
+                ? (getWorkspace().selectedNode as AudioSourceNode).data.channelName
                 : "Default Channel",
             startAtUnit: Snapper.snap(scrollX.value + event.offsetX * 96 / zoomX.value, props.snap),
             durationUnit: Units.msToUnits(getWorkspace().project.bpm, (handle.audioBuffer.length / handle.audioBuffer.sampleRate) * 1000),

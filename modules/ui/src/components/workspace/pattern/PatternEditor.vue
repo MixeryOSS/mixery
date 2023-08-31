@@ -6,9 +6,9 @@ import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import PatternTrack from "../pattern/PatternTrack.vue";
 import FancyScrollbar from '../universal/FancyScrollbar.vue';
 import { Tools } from '@/handling/Tools';
-import { computed, ref, unref, type ComponentInternalInstance, toRaw, watch, nextTick } from 'vue';
-import { NoteClipNode, type Clip, type PlaylistTrack } from '@mixery/engine';
-import type { ToolContext, ToolObject } from '@/handling/ITool';
+import { computed, ref, toRaw, watch } from 'vue';
+import { NotesSourceNode, type Clip, type PlaylistTrack } from '@mixery/engine';
+import type { ToolContext } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
@@ -54,8 +54,8 @@ const selectedTool = ref(tools[0]);
 const toolContext: ToolContext = {
     get snapSegmentSize() { return snap.value; },
     createObject() {
-        const clipChannel = getWorkspace().selectedNode instanceof NoteClipNode
-            ? (getWorkspace().selectedNode as NoteClipNode).data.channelName
+        const clipChannel = getWorkspace().selectedNode instanceof NotesSourceNode
+            ? (getWorkspace().selectedNode as NotesSourceNode).data.channelName
             : getWorkspace().editingNotesClip? getWorkspace().editingNotesClip!.clipChannel
             : "Default Channel";
 
