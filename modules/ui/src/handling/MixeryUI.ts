@@ -1,5 +1,5 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
-import { Project, Workspace, type Clip, Player, type INode, SpeakerNode, PluckNode, type NotesClip, AudioSourceNode, NotesSourceNode } from "@mixery/engine";
+import { Project, Workspace, type Clip, Player, type INode, SpeakerNode, PluckNode, type NotesClip, AudioSourceNode, NotesSourceNode, NodesNetwork } from "@mixery/engine";
 
 export namespace MixeryUI {
     /**
@@ -39,15 +39,17 @@ export namespace MixeryUI {
         readonly rendering = new RenderingHelper.RenderingManager();
         settings: WorkspaceSettings = {
             fancyRendering: true,
-            accentColor: [177, 100, 71]
+            accentColor: [177, 100, 71],
+            doubleClickSpeed: 500, // Default Windows double-click speed
         };
         project: Project;
         player: Player;
 
-        // Selections
+        // Editors
         selectedClips: Set<Clip> = new Set(); // Patterns editor
         selectedNode: INode<any, any> | undefined; // Nodes editor, TODO multiple nodes
         editingNotesClip: NotesClip | undefined; // Piano roll
+        nodesStack: NodesNetwork[];
         
         constructor(
             public readonly workspace: Workspace,
@@ -56,6 +58,7 @@ export namespace MixeryUI {
             this.rendering = new RenderingHelper.RenderingManager();
             this.project = createNewProject(workspace);
             this.player = new Player(this.project);
+            this.nodesStack = [this.project.nodes];
         }
 
         setProject(project: Project): void {
@@ -65,6 +68,7 @@ export namespace MixeryUI {
             this.selectedClips.clear();
             this.selectedNode = undefined;
             this.editingNotesClip = undefined;
+            this.nodesStack = [this.project.nodes];
             this.rendering.redrawRequest(RenderingHelper.Keys.All);
         }
     }
@@ -72,6 +76,7 @@ export namespace MixeryUI {
     export interface WorkspaceSettings {
         fancyRendering: boolean;
         accentColor: [number, number, number];
+        doubleClickSpeed: number;
     }
 
     export const workspaces: Map<string, WorkspaceView> = new Map();

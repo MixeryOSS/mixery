@@ -2,14 +2,16 @@
 import MixeryWindow from '../windows/MixeryWindow.vue';
 import TitlebarButton from '../windows/TitlebarButton.vue';
 import MixeryIcon from '../icons/MixeryIcon.vue';
-import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import WindowToolsbar from '../windows/WindowToolsbar.vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { useTrackableXY, useParentState } from '../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
-import { NoteClipNode, type IPort, type INode, type PortsConnection } from '@mixery/engine';
+import { type IPort, type INode, type PortsConnection, GroupNode, GroupPlaceholderPort } from '@mixery/engine';
 import type { ContextMenuEntry } from '../contextmenus/ContextMenuEntry';
 import { traverse } from '@/utils';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
+import { DoubleClickHandler } from '@/handling/DoubleClickHandler';
 
 const props = defineProps<{
     visible: boolean,
@@ -39,9 +41,17 @@ const canvasRenderer = ref<CanvasRenderer>();
 const zoomBar = ref<HTMLDivElement>();
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
-function getNodes() { return getWorkspace().project.nodes; }
+function getCurrentGroup() {
+    const stack = getWorkspace().nodesStack;
+    return stack[stack.length - 1];
+}
 
 const selectedNodeRefForRendering = ref(getWorkspace().selectedNode);
+const groupsStackUpdateHandle = ref(0);
+const groupsStackRef = computed(() => {
+    groupsStackUpdateHandle.value;
+    return getWorkspace().nodesStack.map(v => v.networkName);
+});
 
 function computeNodeViewBox(node: INode<any, any>) {
     const { nodeX, nodeY } = node;
@@ -54,10 +64,10 @@ function computeNodeViewBox(node: INode<any, any>) {
 }
 
 function linkConnection(wire: PortsConnection) {
-    const fromNode = getNodes().nodes.find(v => v.nodeId == wire.from[0]);
-    const toNode = getNodes().nodes.find(v => v.nodeId == wire.to[0]);
+    const fromNode = getCurrentGroup().nodes.find(v => v.nodeId == wire.from[0]);
+    const toNode = getCurrentGroup().nodes.find(v => v.nodeId == wire.to[0]);
     if (!fromNode || !toNode) return undefined;
-            
+
     const fromPortIndex = fromNode.getOutputPorts().findIndex(v => v.portId == wire.from[1]);
     const toPortIndex = toNode.getInputPorts().findIndex(v => v.portId == wire.to[1]);
     if (fromPortIndex == -1 || toPortIndex == -1) return undefined;
@@ -169,7 +179,7 @@ onMounted(() => {
         }
 
         // We will have node controls on the (right?) panel
-        getNodes().nodes.forEach(node => {
+        getCurrentGroup().nodes.forEach(node => {
             const inputs = node.getInputPorts();
             const outputs = node.getOutputPorts();
             const { renderX, renderY, renderWidth, renderHeight } = computeNodeViewBox(node);
@@ -197,7 +207,7 @@ onMounted(() => {
         });
 
         // Render wires
-        getNodes().connections.forEach(wire => {
+        getCurrentGroup().connections.forEach(wire => {
             const geom = computeConnectionGeometry(wire);
             if (!geom) return;
 
@@ -246,6 +256,7 @@ onMounted(() => {
 watch(x, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(y, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(zoomRatio, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+watch(groupsStackUpdateHandle, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 
 function addNode(event: MouseEvent) {
     const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
@@ -254,17 +265,19 @@ function addNode(event: MouseEvent) {
     contextMenuY.value = event.pageY - (workspaceBox?.y ?? 0);
     const entries: ContextMenuEntry[] = [];
     getWorkspace().workspace.registries.nodeFactories.forEach((id, factory) => {
+        if (factory.hidden) return;
+        
         entries.push({
             label: factory.label,
             async onClick() {
-                const createTask = factory.createNew(getWorkspace().project, getNodes().generateNodeId());
+                const createTask = factory.createNew(getWorkspace().project, getCurrentGroup().generateNodeId());
                 if (createTask instanceof Promise) getWorkspace().workspace.loadingManager.add(createTask);
                 const node = (await createTask) as INode<any, any>;
                 node.nodeX = -x.value - node.nodeWidth / 2;
                 node.nodeY = -y.value;
                 getWorkspace().selectedNode = node;
                 selectedNodeRefForRendering.value = node;
-                getNodes().nodes.push(node);
+                getCurrentGroup().nodes.push(node);
                 getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
             },
         });
@@ -273,7 +286,7 @@ function addNode(event: MouseEvent) {
 }
 
 function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort<any>, portType?: "input" | "output") => any) {
-    const nodes = getNodes().nodes;
+    const nodes = getCurrentGroup().nodes;
     const pointerX = (event.offsetX - canvas.value!.offsetWidth / 2) / zoomRatio.value;
     const pointerY = (event.offsetY - canvas.value!.offsetHeight / 2) / zoomRatio.value;
 
@@ -312,16 +325,29 @@ function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort
         }
     }
 }
-    
+
+const doubleclick = new DoubleClickHandler(() => getWorkspace().settings.doubleClickSpeed, (event) => {
+    nodeClick(event, (node, port, portType) => {
+        if (node instanceof GroupNode) {
+            getWorkspace().nodesStack.push(node.children);
+            getWorkspace().selectedNode = undefined;
+            selectedNodeRefForRendering.value = undefined;
+            groupsStackUpdateHandle.value++;
+        }
+    });
+});
+
 // TODO should we have multiple tools for nodes editor?
 function onPointerDown(event: PointerEvent) {
+    doubleclick.mouseDown(event);
+
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
 
     if (targettingWire) {
         const linked = linkConnection(targettingWire);
         if (!linked) return;
-        getNodes().disconnect(linked.fromNode.getOutputPorts()[linked.fromPortIndex], linked.toNode.getInputPorts()[linked.toPortIndex]);
+        getCurrentGroup().disconnect(linked.fromNode.getOutputPorts()[linked.fromPortIndex], linked.toNode.getInputPorts()[linked.toPortIndex]);
         targettingWire = undefined;
         wireCutterMode.value = false;
         getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
@@ -335,14 +361,17 @@ function onPointerDown(event: PointerEvent) {
         nodeClicked = lastNode = node;
         lastPort = port;
         lastPortType = type;
-        getNodes().nodes.splice(getNodes().nodes.indexOf(node), 1);
-        getNodes().nodes.push(node);
+        console.log(port?.node);
+        getCurrentGroup().nodes.splice(getCurrentGroup().nodes.indexOf(node), 1);
+        getCurrentGroup().nodes.push(node);
         getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
     });
 
     if (!nodeClicked) isMoving = true;
 }
 function onPointerMove(event: PointerEvent) {
+    doubleclick.clear();
+
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
 
@@ -352,7 +381,7 @@ function onPointerMove(event: PointerEvent) {
         return;
     }
 
-    const { connections } = getNodes();
+    const { connections } = getCurrentGroup();
     const viewWidth = canvas.value!.offsetWidth / zoomRatio.value;
     const viewHeight = canvas.value!.offsetHeight / zoomRatio.value;
     const worldX = canvasRenderer.value!.mouseX / zoomRatio.value - viewWidth / 2;
@@ -402,8 +431,14 @@ function onPointerMove(event: PointerEvent) {
         nodeClick(event, (node, port, type) => {
             if (lastPortType == type) return;
             if (lastNode == node) return;
-            if (lastPort?.type != port?.type) return;
-            targettingPort = port;
+
+            if (
+                lastPort?.type == port?.type ||
+                lastPort?.type == "mixery:group_placeholder_port" ||
+                port?.type == "mixery:group_placeholder_port"
+            ) {
+                targettingPort = port;
+            }
         });
     } else {
         lastNode.nodeX += event.movementX / zoomRatio.value;
@@ -417,8 +452,14 @@ function onPointerUp(event: PointerEvent) {
 
     if (lastNode) {
         if (lastPort && targettingPort) {
-            if (lastPortType == "output") getNodes().connect(lastPort, targettingPort);
-            else getNodes().connect(targettingPort, lastPort);
+            if (lastPort instanceof GroupPlaceholderPort) {
+                lastPort.handlePlaceholderConnectTo(targettingPort);
+            } else if (targettingPort instanceof GroupPlaceholderPort) {
+                targettingPort.handlePlaceholderConnectFrom(lastPort);
+            } else {
+                if (lastPortType == "output") getCurrentGroup().connect(lastPort, targettingPort);
+                else getCurrentGroup().connect(targettingPort, lastPort);
+            }
         }
 
         lastNode = undefined;
@@ -456,7 +497,9 @@ function onWheel(event: WheelEvent) {
 }
 
 function deleteNode(node: INode<any, any>) {
-    getNodes().connections.map(wire => {
+    if (node.canNotBeDeleted) return;
+
+    getCurrentGroup().connections.map(wire => {
         if (!(wire.from[0] == node.nodeId || wire.to[0] == node.nodeId)) return undefined;
 
         const linked = linkConnection(wire);
@@ -467,12 +510,23 @@ function deleteNode(node: INode<any, any>) {
     }).forEach(a => {
         if (!a) return;
         const [fromPort, toPort] = a;
-        getNodes().disconnect(fromPort, toPort);
+        getCurrentGroup().disconnect(fromPort, toPort);
     });
 
-    getNodes().nodes.splice(getNodes().nodes.indexOf(node));
+    getCurrentGroup().nodes.splice(getCurrentGroup().nodes.indexOf(node));
     getWorkspace().selectedNode = undefined;
     selectedNodeRefForRendering.value = undefined;
+}
+
+function navigateUp(index: number) {
+    if (index < 0) index = 0;
+    const currentIndex = getWorkspace().nodesStack.length - 1;
+    if (index >= currentIndex) return;
+
+    for (let i = 0; i < currentIndex - index; i++) getWorkspace().nodesStack.pop();
+    getWorkspace().selectedNode = undefined;
+    selectedNodeRefForRendering.value = undefined;
+    groupsStackUpdateHandle.value++;
 }
 </script>
 
@@ -483,6 +537,14 @@ function deleteNode(node: INode<any, any>) {
         </template>
         <template v-slot:title-right>
             <TitlebarButton @click="emits('update:visible', !props.visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
+        </template>
+        <template v-slot:toolsbars v-if="groupsStackRef.length > 1">
+            <WindowToolsbar>
+                <TitlebarButton @click="navigateUp(getWorkspace().nodesStack.length - 2)">&lt; Up</TitlebarButton>
+                <template v-for="(name, index) in groupsStackRef">
+                    <TitlebarButton @click="navigateUp(index)">{{ name }}</TitlebarButton>
+                </template>
+            </WindowToolsbar>
         </template>
         <canvas
             ref="canvas"
@@ -519,7 +581,7 @@ function deleteNode(node: INode<any, any>) {
             </div>
             <div class="button delete"
                 @click="deleteNode(getWorkspace().selectedNode!); getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
-                v-if="selectedNodeRefForRendering"
+                v-if="selectedNodeRefForRendering && !selectedNodeRefForRendering.canNotBeDeleted"
             >Delete Node</div>
         </div>
     </MixeryWindow>

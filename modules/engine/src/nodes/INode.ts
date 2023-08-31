@@ -16,6 +16,11 @@ export interface INode<T extends INode<T, TData>, TData> {
     readonly nodeId: string;
 
     /**
+     * Used by special nodes. Prevent user from deleting the node.
+     */
+    readonly canNotBeDeleted?: boolean;
+
+    /**
      * Name of this node. Can be changed by user.
      */
     nodeName?: string;
@@ -44,6 +49,8 @@ export interface INode<T extends INode<T, TData>, TData> {
     saveNode(): TData;
 }
 
+export type INodeAny = INode<any, any>;
+
 export type NewNodeFactory<T extends INode<T, TData>, TData> = (
     project: Project,
     nodeId: string
@@ -61,6 +68,7 @@ export type NodeFromDataFactory<T extends INode<T, TData>, TData> = (
 export interface NodeFactory<T extends INode<T, TData>, TData> {
     readonly typeId: Identifier;
     readonly label: string;
+    readonly hidden?: boolean;
     createNew: NewNodeFactory<T, TData>;
     createExisting: NodeFromDataFactory<T, TData>;
 }

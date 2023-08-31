@@ -10,11 +10,16 @@ export * from "./misc/Units.js";
 export * from "./misc/Waveforms.js";
 
 export * from "./nodes/AudioSourceNode.js";
+export * from "./nodes/DebugNode.js";
 export * from "./nodes/INode.js";
 export * from "./nodes/NodesNetwork.js";
 export * from "./nodes/NotesSourceNode.js";
 export * from "./nodes/PluckNode.js";
 export * from "./nodes/SpeakerNode.js";
+
+export * from "./nodes/group/GroupIONode.js";
+export * from "./nodes/group/GroupNode.js";
+export * from "./nodes/group/GroupPlaceholderPort.js";
 
 export * from "./nodes/ports/IPort.js";
 export * from "./nodes/ports/MidiPort.js";

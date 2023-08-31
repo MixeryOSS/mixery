@@ -42,6 +42,10 @@ function updateAccentColor() {
             <Digital1DSlider name="Sat" v-model="settings.accentColor[1]" :min="0" :max="100" />
             <Digital1DSlider name="Light" v-model="settings.accentColor[2]" :min="0" :max="100" />
         </div>
+        <div class="entry">
+            <div class="label">Double click timing</div>
+            <Digital1DSlider name="Milliseconds" v-model="settings.doubleClickSpeed" :min="50" :max="1000"></Digital1DSlider>
+        </div>
     </MixeryWindow>
 </template>
 

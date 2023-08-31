@@ -16,7 +16,7 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
     speakerPort: SignalPort;
 
     constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
-        this.speakerPort = new SignalPort(this, "speaker", audioContext.destination);
+        this.speakerPort = new SignalPort(this, "speaker", audioContext, audioContext.destination);
         this.speakerPort.portName = "Destination";
         this.inputs.push(this.speakerPort);
     }

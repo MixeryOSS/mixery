@@ -30,11 +30,11 @@ export class PluckNode implements INode<PluckNode, any> {
         this.midiIn.portName = "MIDI";
         this.inputs.push(this.midiIn);
 
-        this.audioOut = new SignalPort(this, "audioOut", audioContext.createGain());
+        this.audioOut = new SignalPort(this, "audioOut", audioContext, audioContext.createGain());
         this.audioOut.portName = "Audio";
         this.outputs.push(this.audioOut);
 
-        this.audioGain = new SignalPort(this, "audioGain", (this.audioOut.socket as GainNode).gain);
+        this.audioGain = new SignalPort(this, "audioGain", audioContext, (this.audioOut.socket as GainNode).gain);
         this.audioGain.portName = "Gain";
         this.inputs.push(this.audioGain);
 

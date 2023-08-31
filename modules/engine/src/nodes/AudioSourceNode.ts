@@ -32,11 +32,11 @@ export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeDa
             set value(v: string) { self.data.channelName = v; }
         });
 
-        this.audioOut = new SignalPort(this, "audioOut", audio.createGain());
+        this.audioOut = new SignalPort(this, "audioOut", audio, audio.createGain());
         this.audioOut.portName = "Output";
         this.outputs.push(this.audioOut);
 
-        this.audioGain = new SignalPort(this, "audioGain", (this.audioOut.socket as GainNode).gain);
+        this.audioGain = new SignalPort(this, "audioGain", audio, (this.audioOut.socket as GainNode).gain);
         this.audioGain.portName = "Gain";
         this.inputs.push(this.audioGain);
     }

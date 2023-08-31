@@ -1,7 +1,7 @@
 import { Note } from "../../midi/Note.js";
 import { IEmitter, SimpleEmitter } from "../../misc/Emitter.js";
 import { Identifier } from "../../types.js";
-import { INode } from "../INode.js";
+import { INode, INodeAny } from "../INode.js";
 import { IPort } from "./IPort.js";
 
 export class MidiPort implements IPort<MidiPort> {
@@ -14,16 +14,24 @@ export class MidiPort implements IPort<MidiPort> {
 
     constructor(readonly node: INode<any, any>, readonly portId: string) {}
 
-    onConnectedToPort(port: MidiPort): void {
-        // NodesNetwork will automatically add port to connectedTo
+    onConnectedToPort(port: MidiPort) {
+        this.connectedTo.add(port);
+        return true;
     }
 
-    onDisconnectedFromPort(port: MidiPort): void {
-        // NodesNetwork will automatically remote port from connectedTo
+    onDisconnectedFromPort(port: MidiPort) {
+        return this.connectedTo.delete(port);
     }
 
     emitNote(note: Note) {
         this.onNoteEvent.emit(note);
         this.connectedTo.forEach(c => c.emitNote(note));
+    }
+
+    makeBridge(outToIn: boolean, nodeInside: INodeAny, idInside: string, nodeOutside: INodeAny, idOutside: string): { inside: MidiPort; outside: MidiPort; } {
+        return {
+            inside: new MidiPort(nodeInside, idInside),
+            outside: new MidiPort(nodeOutside, idOutside)
+        };
     }
 }

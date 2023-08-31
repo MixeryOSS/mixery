@@ -1,9 +1,10 @@
 import { AudioSourceNode, IPort, Identifier, MidiPort, Note, NotesSourceNode, PortsConnection, Project } from "../index.js";
-import { INode } from "./INode.js";
+import { INode, INodeAny } from "./INode.js";
 
 export class NodesNetwork {
     nodes: INode<any, any>[] = [];
     connections: PortsConnection[] = [];
+    networkName = "Main";
 
     #idGenCounter = 0;
     generateNodeId() {
@@ -12,32 +13,37 @@ export class NodesNetwork {
 
     connect(from: IPort<any>, to: IPort<any>) {
         if (from.connectedTo.has(to)) return false;
-
-        this.connections.push({
+        if (from.onConnectedToPort(to)) this.connections.push({
             from: [from.node.nodeId, from.portId],
             to: [to.node.nodeId, to.portId]
         });
-
-        from.onConnectedToPort(to);
-        from.connectedTo.add(to);
         return true;
     }
 
     disconnect(from: IPort<any>, to: IPort<any>) {
         if (from.connectedTo.has(to)) {
-            from.onDisconnectedFromPort(to);
-            from.connectedTo.delete(to);
-
-            const idx = this.connections.findIndex(v => (
-                v.from[0] == from.node.nodeId && v.from[1] == from.portId &&
-                v.to[0] == to.node.nodeId && v.to[1] == to.portId
-            ));
-            if (idx != -1) this.connections.splice(idx, 1);
-
-            return true;
+            if (from.onDisconnectedFromPort(to)) {
+                const idx = this.connections.findIndex(v => (
+                    v.from[0] == from.node.nodeId && v.from[1] == from.portId &&
+                    v.to[0] == to.node.nodeId && v.to[1] == to.portId
+                ));
+                if (idx != -1) this.connections.splice(idx, 1);
+                return true;
+            }
         }
 
         return false;
+    }
+
+    select(nodeId: string): INodeAny | undefined;
+    select(nodeId: string, portId: string): IPort<any> | undefined;
+    select(nodeId: string, portId?: string): INodeAny | IPort<any> | undefined {
+        const node = this.nodes.find(v => v.nodeId == nodeId);
+        if (!node) return undefined;
+        if (!portId) return node;
+        const ports = [...node.getInputPorts(), ...node.getOutputPorts()];
+        const port = ports.find(v => v.portId == portId);
+        return port;
     }
 
     sendNoteSignal(channel: string, event: Note) {
