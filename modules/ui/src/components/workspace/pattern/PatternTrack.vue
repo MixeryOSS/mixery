@@ -73,6 +73,7 @@ onMounted(() => {
         getTrack().clips.forEach(clip => {
             let clipX = (clip.startAtUnit - props.scrollX) * props.zoomX / 96;
             let clipWidth = clip.durationUnit * props.zoomX / 96;
+            let textWidth = clipWidth + Math.min(clipX, 0) - 12;
             let textX = clipX < 0? 0 : clipX;
             if (clipX > canvas.value!.offsetWidth || (clipX + clipWidth) < 0) return;
             let clipName: string;
@@ -92,7 +93,7 @@ onMounted(() => {
                 
                 renderer.ctx!.globalAlpha = 1;
                 renderer.stroke(selected? selectedOutline : normalOutline, 2).end();
-                renderer.fillText(clipName, textX + 5, 11, "12px Nunito Sans", "#000000");
+                renderer.fillTextWithLimit(clipName, textX + 5, 11, textWidth, "12px Nunito Sans", "#000000");
 
                 // Render clips
                 // We might need precalculation here

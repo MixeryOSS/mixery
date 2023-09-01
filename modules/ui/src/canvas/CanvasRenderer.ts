@@ -109,4 +109,11 @@ export class CanvasRenderer {
         .fillRect(x, y, width * progress, height, progressed)
         .fillRect(x + (width * progress), y, width * (1 - progress), height, pending);
     }
+
+    fillTextWithLimit(text: string, x: number, y: number, maxWidth: number, font?: string, c?: string) {
+        if (font != undefined) this.ctx!.font = font;
+        if (c != undefined) this.ctx!.fillStyle = c;
+        this.ctx!.fillText(text, x, y, maxWidth);
+        return this;
+    }
 }
