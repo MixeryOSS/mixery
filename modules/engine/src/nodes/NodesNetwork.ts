@@ -11,12 +11,14 @@ export class NodesNetwork {
         return `snowflake-${Date.now()}-${this.#idGenCounter++}`;
     }
 
-    connect(from: IPort<any>, to: IPort<any>) {
+    connect(from: IPort<any>, to: IPort<any>, isLoading: boolean = false) {
         if (from.connectedTo.has(to)) return false;
-        if (from.onConnectedToPort(to)) this.connections.push({
-            from: [from.node.nodeId, from.portId],
-            to: [to.node.nodeId, to.portId]
-        });
+        if (from.onConnectedToPort(to)) {
+            if (!isLoading) this.connections.push({
+                from: [from.node.nodeId, from.portId],
+                to: [to.node.nodeId, to.portId]
+            });
+        }
         return true;
     }
 
@@ -112,7 +114,7 @@ export class NodesNetwork {
                 return;
             }
 
-            this.connect(fromPort, toPort);
+            this.connect(fromPort, toPort, true);
         });
 
         return this;

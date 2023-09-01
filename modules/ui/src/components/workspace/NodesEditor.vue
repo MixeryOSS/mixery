@@ -384,7 +384,6 @@ function onPointerDown(event: PointerEvent) {
         nodeClicked = lastNode = node;
         lastPort = port;
         lastPortType = type;
-        console.log(port?.node);
         getCurrentGroup().nodes.splice(getCurrentGroup().nodes.indexOf(node), 1);
         getCurrentGroup().nodes.push(node);
         getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
