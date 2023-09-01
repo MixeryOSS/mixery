@@ -30,6 +30,8 @@ const contextMenuY = ref(0);
 
 const updateThing = ref(0); // Dirty way to update
 const explorerPaneUpdateHandle = ref(0);
+const nodesEditorUpdateHandle = ref(0);
+
 const reactiveBpm = computed(() => {
     updateThing.value;
     return getWorkspace().project.bpm;
@@ -163,6 +165,7 @@ function openProject() {
             .then(() => {
                 getWorkspace().setProject(project);
                 explorerPaneUpdateHandle.value++;
+                nodesEditorUpdateHandle.value++;
             })
         );
     };
@@ -276,7 +279,8 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                     :workspace-id="props.workspaceId"
                     v-model:context-menu="contextMenu"
                     v-model:context-menu-x="contextMenuX"
-                    v-model:context-menu-y="contextMenuY" />
+                    v-model:context-menu-y="contextMenuY"
+                    v-model:update-handle="nodesEditorUpdateHandle" />
                 <SettingsWindow :workspace-id="props.workspaceId" v-model:visible="settingsWindowVisible" />
             </WindowsContainer>
         </div>

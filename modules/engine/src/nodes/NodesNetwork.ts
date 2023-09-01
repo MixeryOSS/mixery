@@ -4,7 +4,10 @@ import { INode, INodeAny } from "./INode.js";
 export class NodesNetwork {
     nodes: INode<any, any>[] = [];
     connections: PortsConnection[] = [];
+
     networkName = "Main";
+    viewX: number = 0;
+    viewY: number = 0;
 
     #idGenCounter = 0;
     generateNodeId() {
@@ -62,6 +65,8 @@ export class NodesNetwork {
     save() {
         let saved: SavedNodesNetwork = {
             nodes: {},
+            viewX: this.viewX,
+            viewY: this.viewY,
             connections: structuredClone(this.connections)
         };
 
@@ -78,6 +83,8 @@ export class NodesNetwork {
     }
 
     async load(saved: SavedNodesNetwork, project: Project) {
+        this.viewX = saved.viewX ?? 0;
+        this.viewY = saved.viewY ?? 0;
         this.connections = structuredClone(saved.connections);
 
         await Promise.all(Object.keys(saved.nodes).map(async nodeId => {
@@ -122,6 +129,8 @@ export class NodesNetwork {
 }
 
 export interface SavedNodesNetwork {
+    viewX: number;
+    viewY: number;
     nodes: Record<string, SavedNode>;
     connections: PortsConnection[];
 }

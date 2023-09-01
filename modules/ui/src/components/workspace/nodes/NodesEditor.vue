@@ -19,17 +19,19 @@ const props = defineProps<{
     workspaceId: string,
     contextMenu?: ContextMenuEntry[],
     contextMenuX: number,
-    contextMenuY: number
+    contextMenuY: number,
+    updateHandle: number
 }>();
 const emits = defineEmits([
     "update:visible",
     "update:contextMenu",
     "update:contextMenuX",
-    "update:contextMenuY"
+    "update:contextMenuY",
+    "update:updateHandle"
 ]);
+
+const updateHandle = useParentState("updateHandle", props, emits);
 const grid = ref(50); // 50px grid size
-const x = ref(0);
-const y = ref(0);
 const zoomRatio = ref(1);
 const wireCutterMode = ref(false);
 
@@ -47,10 +49,30 @@ function getCurrentGroup() {
     return stack[stack.length - 1];
 }
 
+const x = computed({
+    get() {
+        updateHandle.value;
+        return getCurrentGroup().viewX;
+    },
+    set(v) {
+        updateHandle.value++;
+        getCurrentGroup().viewX = v;
+    }
+});
+const y = computed({
+    get() {
+        updateHandle.value;
+        return getCurrentGroup().viewY;
+    },
+    set(v) {
+        updateHandle.value++;
+        getCurrentGroup().viewY = v;
+    }
+});
+
 const selectedNodeRefForRendering = ref(getWorkspace().selectedNode);
-const groupsStackUpdateHandle = ref(0);
 const groupsStackRef = computed(() => {
-    groupsStackUpdateHandle.value;
+    updateHandle.value;
     return getWorkspace().nodesStack.map(v => v.networkName);
 });
 
@@ -155,7 +177,7 @@ onMounted(() => {
 watch(x, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(y, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(zoomRatio, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
-watch(groupsStackUpdateHandle, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+watch(updateHandle, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 
 function addNode(event: MouseEvent) {
     const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
@@ -231,7 +253,7 @@ const doubleclick = new DoubleClickHandler(() => getWorkspace().settings.doubleC
             getWorkspace().nodesStack.push(node.children);
             getWorkspace().selectedNode = undefined;
             selectedNodeRefForRendering.value = undefined;
-            groupsStackUpdateHandle.value++;
+            updateHandle.value++;
         }
     });
 });
@@ -424,7 +446,7 @@ function navigateUp(index: number) {
     for (let i = 0; i < currentIndex - index; i++) getWorkspace().nodesStack.pop();
     getWorkspace().selectedNode = undefined;
     selectedNodeRefForRendering.value = undefined;
-    groupsStackUpdateHandle.value++;
+    updateHandle.value++;
 }
 </script>
 
