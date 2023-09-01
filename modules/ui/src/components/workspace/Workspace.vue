@@ -6,7 +6,7 @@ import WorkspaceToolsbarButton from "./WorkspaceToolsbarButton.vue";
 import MixeryIcon from "../icons/MixeryIcon.vue";
 import PianoRoll from "./piano/PianoRoll.vue";
 import PatternEditor from "./pattern/PatternEditor.vue";
-import NodesEditor from "./NodesEditor.vue";
+import NodesEditor from "./nodes/NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
 

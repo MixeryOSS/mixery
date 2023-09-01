@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import MixeryWindow from '../windows/MixeryWindow.vue';
-import TitlebarButton from '../windows/TitlebarButton.vue';
-import MixeryIcon from '../icons/MixeryIcon.vue';
-import WindowToolsbar from '../windows/WindowToolsbar.vue';
+import MixeryWindow from '../../windows/MixeryWindow.vue';
+import TitlebarButton from '../../windows/TitlebarButton.vue';
+import MixeryIcon from '../../icons/MixeryIcon.vue';
+import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
-import { useTrackableXY, useParentState } from '../composes';
+import { useTrackableXY, useParentState } from '../../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { type IPort, type INode, type PortsConnection, GroupNode, GroupPlaceholderPort } from '@mixery/engine';
-import type { ContextMenuEntry } from '../contextmenus/ContextMenuEntry';
+import type { ContextMenuEntry } from '../../contextmenus/ContextMenuEntry';
 import { traverse } from '@/utils';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { DoubleClickHandler } from '@/handling/DoubleClickHandler';
+import { internal } from './NodesEditor.internal';
 
 const props = defineProps<{
     visible: boolean,
@@ -52,40 +53,6 @@ const groupsStackRef = computed(() => {
     groupsStackUpdateHandle.value;
     return getWorkspace().nodesStack.map(v => v.networkName);
 });
-
-function computeNodeViewBox(node: INode<any, any>) {
-    const { nodeX, nodeY } = node;
-    const inputs = node.getInputPorts();
-    const outputs = node.getOutputPorts();
-    const renderX = nodeX + x.value, renderY = nodeY + y.value;
-    const renderWidth = node.nodeWidth;
-    const renderHeight = 22 + (inputs.length + outputs.length) * 18;
-    return { renderX, renderY, renderWidth, renderHeight };
-}
-
-function linkConnection(wire: PortsConnection) {
-    const fromNode = getCurrentGroup().nodes.find(v => v.nodeId == wire.from[0]);
-    const toNode = getCurrentGroup().nodes.find(v => v.nodeId == wire.to[0]);
-    if (!fromNode || !toNode) return undefined;
-
-    const fromPortIndex = fromNode.getOutputPorts().findIndex(v => v.portId == wire.from[1]);
-    const toPortIndex = toNode.getInputPorts().findIndex(v => v.portId == wire.to[1]);
-    if (fromPortIndex == -1 || toPortIndex == -1) return undefined;
-
-    return { fromNode, toNode, fromPortIndex, toPortIndex };
-}
-
-function computeConnectionGeometry(wire: PortsConnection) {
-    const linked = linkConnection(wire);
-    if (!linked) return undefined;
-
-    const { fromNode,toNode, fromPortIndex, toPortIndex } = linked;
-    const fromX = x.value + fromNode.nodeX + fromNode.nodeWidth - 2;
-    const fromY = y.value + fromNode.nodeY + 28 + (fromNode.getInputPorts().length + fromPortIndex) * 18;
-    const toX = x.value + toNode.nodeX + 2;
-    const toY = y.value + toNode.nodeY + 28 + toPortIndex * 18;
-    return { fromX, fromY, toX, toY, fromNode, toNode, fromPortIndex, toPortIndex };
-}
 
 function distance(x1: number, y1: number, x2: number, y2: number) {
     const vx = x2 - x1;
@@ -152,99 +119,8 @@ onMounted(() => {
         renderer.fillRect(x.value - 10, y.value - 1, 20, 2, centerColor);
         renderer.fillRect(x.value - 1, y.value - 10, 2, 20, centerColor);
 
-        function drawPort(port: IPort<any>, type: "input" | "output", width: number, x: number, y: number) {
-            const portName = port.portName ?? port.portId;
-            const textWidth = renderer.ctx.measureText(portName).width;
-            const portColor = getPortColor(port.type);
-            const portStroke = "#000000";
-            const portLabelStroke = port.type == "mixery:group_placeholder_port"? "#ffffff" : "#00000000";
-
-            renderer.ctx.globalAlpha = 0.35;
-            renderer.begin().roundRect(x + 4, y, width - 8, 16, 4).fill(portColor);
-            renderer.ctx.globalAlpha = 1;
-            renderer.stroke(portLabelStroke, 1.2).end();
-
-            renderer.fillText(portName, x + (type == "output"? (width - textWidth - 8) : 8), y + 12, "12px Nunito Sans", "#ffffff");
-
-            let tX = 0;
-            switch (type) {
-                case "input": tX = 1; break;
-                case "output": tX = width - 5; break;
-                default: break;
-            }
-            
-            renderer.ctx.translate(x + tX, y + 4);
-            renderer.begin().roundRect(0, 0, 4, 8, 1)
-            .fill(portColor)
-            .stroke(portStroke, 1)
-            .end();
-            renderer.ctx.translate(-x - tX, -y - 4);
-
-            return y + 18;
-        }
-
-        // We will have node controls on the (right?) panel
-        getCurrentGroup().nodes.forEach(node => {
-            const inputs = node.getInputPorts();
-            const outputs = node.getOutputPorts();
-            const { renderX, renderY, renderWidth, renderHeight } = computeNodeViewBox(node);
-            // TODO test if visible otherwise discard
-            
-            const selected = node == getWorkspace().selectedNode;
-            const nodeName = node.nodeName ?? node.typeId;
-
-            if (node.typeId == GroupNode.ID) {
-                for (let i = 6; i >= 0; i -= 3) {
-                    renderer.ctx.translate(-i, -i);
-                    renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).fill("#1f1f1f").end();
-                    renderer.fillRoundRect(renderX, renderY, renderWidth, 16, 4, "#4f4f4f");
-                    renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).stroke("#7f7f7f", 1).end();
-                    renderer.ctx.translate(i, i);
-                }
-            }
-            
-            renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).fill("#1f1f1f").end();
-            renderer.fillRoundRect(renderX, renderY, renderWidth, 16, 4, "#4f4f4f");
-            renderer.fillText(nodeName, renderX + 4, renderY + 12, "12px Nunito Sans", "#ffffff");
-            renderer.begin().roundRect(renderX, renderY, renderWidth, renderHeight, 4).stroke(selected? "#ffffff" : "#7f7f7f", selected? 2 : 1).end();
-
-            if (node.typeId == GroupNode.ID) {
-                renderer.begin()
-                .rect(renderX + renderWidth - 12 + 0.5, renderY + 4 + 0.5, 6, 6)
-                .rect(renderX + renderWidth - 14 + 0.5, renderY + 6 + 0.5, 6, 6)
-                .stroke("#ffffff", 1)
-                .end();
-            }
-
-            let currentY = renderY + 20;
-            inputs.forEach(port => currentY = drawPort(port, "input", renderWidth, renderX, currentY));
-            outputs.forEach(port => currentY = drawPort(port, "output", renderWidth, renderX, currentY));
-
-            if (selected) {
-                renderer.begin()
-                .roundRect(renderX - 6, renderY - 6, renderWidth + 12, renderHeight + 12, 7)
-                .stroke("#0000007f", 4)
-                .stroke(accent, 2)
-                .end();
-            }
-        });
-
-        // Render wires
-        getCurrentGroup().connections.forEach(wire => {
-            const geom = computeConnectionGeometry(wire);
-            if (!geom) return;
-
-            const { fromX, fromY, toX, toY } = geom;
-            const fromPort = geom.fromNode.getOutputPorts()[geom.fromPortIndex];
-
-            renderer.begin()
-            .pointer(fromX, fromY)
-            .line(toX, toY);
-            if (targettingWire == wire) renderer.stroke("#ff0000", 8);
-            renderer.stroke("#0000007f", 4)
-            .stroke(getPortColor(fromPort.type), 2)
-            .end();
-        });
+        getCurrentGroup().nodes.forEach(node => internal.drawNode(renderer, node, getWorkspace(), x.value, y.value));
+        getCurrentGroup().connections.forEach(wire => internal.drawWire(renderer, wire, getCurrentGroup(), x.value, y.value));
 
         // Render dragging wire
         if (lastPort) {
@@ -315,7 +191,7 @@ function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort
 
     for (let i = nodes.length - 1; i >= 0; i--) {
         const node = nodes[i];
-        const { renderX, renderY, renderWidth, renderHeight } = computeNodeViewBox(node);
+        const { renderX, renderY, renderWidth, renderHeight } = internal.computeNodeViewBox(node, x.value, y.value);
 
         if (
             (pointerX >= renderX && pointerX <= renderX + renderWidth) &&
@@ -368,7 +244,7 @@ function onPointerDown(event: PointerEvent) {
     canvasRenderer.value!.mouseY = event.offsetY;
 
     if (targettingWire) {
-        const linked = linkConnection(targettingWire);
+        const linked = internal.linkConnection(targettingWire, getCurrentGroup());
         if (!linked) return;
         getCurrentGroup().disconnect(linked.fromNode.getOutputPorts()[linked.fromPortIndex], linked.toNode.getInputPorts()[linked.toPortIndex]);
         targettingWire = undefined;
@@ -414,7 +290,7 @@ function onPointerMove(event: PointerEvent) {
     targettingWire = undefined;
     for (let i = 0; i < connections.length; i++) {
         const connection = connections[i];
-        const geom = computeConnectionGeometry(connection);
+        const geom = internal.computeConnectionGeometry(connection, getCurrentGroup(), x.value, y.value);
         if (!geom) continue;
 
         // Pass 1: AABB
@@ -524,7 +400,7 @@ function deleteNode(node: INode<any, any>) {
     getCurrentGroup().connections.map(wire => {
         if (!(wire.from[0] == node.nodeId || wire.to[0] == node.nodeId)) return undefined;
 
-        const linked = linkConnection(wire);
+        const linked = internal.linkConnection(wire, getCurrentGroup());
         if (!linked) return;
         const fromPort = linked.fromNode.getOutputPorts()[linked.fromPortIndex];
         const toPort = linked.toNode.getInputPorts()[linked.toPortIndex];
