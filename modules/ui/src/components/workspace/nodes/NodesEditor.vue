@@ -5,7 +5,7 @@ import MixeryIcon from '../../icons/MixeryIcon.vue';
 import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
-import { useTrackableXY, useParentState } from '../../composes';
+import { useTrackableXY, useParentState, useResizeObserver } from '../../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { type IPort, type INode, type PortsConnection, GroupNode, GroupPlaceholderPort } from '@mixery/engine';
 import type { ContextMenuEntry } from '../../contextmenus/ContextMenuEntry';
@@ -30,6 +30,7 @@ const emits = defineEmits([
     "update:updateHandle"
 ]);
 
+const visible = useParentState("visible", props, emits);
 const updateHandle = useParentState("updateHandle", props, emits);
 const grid = ref(50); // 50px grid size
 const zoomRatio = ref(1);
@@ -82,15 +83,6 @@ function distance(x1: number, y1: number, x2: number, y2: number) {
     return Math.sqrt(vx * vx + vy * vy);
 }
 
-function getPortColor(type: string) {
-    switch (type) {
-        case "mixery:midi": return "#ffaf5c";
-        case "mixery:signal": return "#c187ff";
-        case "mixery:group_placeholder_port": return "#7f7f7f";
-        default: return "#ff5c5c";
-    }
-}
-
 let lastNode: INode<any, any> | undefined;
 let lastPort: IPort<any> | undefined;
 let lastPortType: "input" | "output" | undefined;
@@ -99,9 +91,9 @@ let targettingWire: PortsConnection | undefined;
 let isMoving = false;
 
 onMounted(() => {
-    const renderer = new CanvasRenderer(canvas.value!, render);
+    const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    renderer.useObserveResize();
+    useResizeObserver(canvas.value!, render);
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.NodesEditor
@@ -113,15 +105,15 @@ onMounted(() => {
     function render() {
         if (!props.visible) return;
         if (!canvas.value) return;
-        renderer.startRender();
+        renderer.startRender(canvas.value);
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
 
         const centerX = x.value;
         const centerY = y.value;
         const viewWidth = canvas.value.offsetWidth / zoomRatio.value;
         const viewHeight = canvas.value.offsetHeight / zoomRatio.value;
-        renderer.ctx.scale(zoomRatio.value, zoomRatio.value);
-        renderer.ctx.translate(viewWidth / 2, viewHeight / 2);
+        renderer.ctx!.scale(zoomRatio.value, zoomRatio.value);
+        renderer.ctx!.translate(viewWidth / 2, viewHeight / 2);
 
         // Render grid
         const gridSize = grid.value;
@@ -178,6 +170,7 @@ watch(x, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.Nodes
 watch(y, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(zoomRatio, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 watch(updateHandle, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+watch(visible,() => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
 
 function addNode(event: MouseEvent) {
     const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
@@ -451,12 +444,12 @@ function navigateUp(index: number) {
 </script>
 
 <template>
-    <MixeryWindow title="Nodes" :width="900" :height="500" resizable :visible="props.visible">
+    <MixeryWindow title="Nodes" :width="900" :height="500" resizable :visible="visible">
         <template v-slot:title-left>
             <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
         </template>
         <template v-slot:title-right>
-            <TitlebarButton @click="emits('update:visible', !props.visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
+            <TitlebarButton @click="emits('update:visible', !visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
         </template>
         <template v-slot:toolsbars v-if="groupsStackRef.length > 1">
             <WindowToolsbar>

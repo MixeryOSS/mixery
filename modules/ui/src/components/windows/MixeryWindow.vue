@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from "vue";
-import { useTrackableXY } from "../composes";
-import WindowToolsbar from "./WindowToolsbar.vue";
+import { ref } from "vue";
+import { useTrackableXYv2 } from "../composes";
 
 const props = defineProps<{
     title: string,
@@ -22,14 +21,12 @@ const root = ref<HTMLDivElement>();
 const title = ref<HTMLDivElement>();
 const resizeHandle = ref<HTMLDivElement>();
 
-onMounted(() => {
-    useTrackableXY(title.value!, x, y, { minX: 0, minY: 0 });
-    useTrackableXY(resizeHandle.value!, width, height, { minY: 64 });
-});
+const trackableWindowPosition = useTrackableXYv2(x, y, { minX: 0, minY: 0 });
+const trackableResizeHandle = useTrackableXYv2(width, height, { minY: 64 })
 </script>
 
 <template>
-    <div class="window" ref="root" v-show="props.visible" :style="{
+    <div class="window" ref="root" v-if="props.visible" :style="{
         width: `${width}px`,
         height: `${height}px`,
         left: `${x}px`,
@@ -37,14 +34,14 @@ onMounted(() => {
     }">
         <div class="titlebar">
             <slot name="title-left"></slot>
-            <div class="title" ref="title">{{ props.title }}</div>
+            <div class="title" ref="title" @pointerdown="trackableWindowPosition">{{ props.title }}</div>
             <slot name="title-right"></slot>
         </div>
         <slot name="toolsbars"></slot>
         <div class="content">
             <slot></slot>
         </div>
-        <div class="resize-handle" ref="resizeHandle" v-if="resizable != undefined"></div>
+        <div class="resize-handle" ref="resizeHandle" @pointerdown="trackableResizeHandle" v-if="resizable != undefined"></div>
     </div>
 </template>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
+import { useResizeObserver } from '@/components/composes';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { Snapper } from '@/handling/Snapper';
 import { Units, type ClippedNote, type ResourcePath, type AudioClip, AudioSourceNode } from '@mixery/engine';
@@ -37,9 +38,9 @@ const canvas = ref<HTMLCanvasElement>();
 const canvasRenderer = ref<CanvasRenderer>();
 
 onMounted(() => {
-    const renderer = new CanvasRenderer(canvas.value!, render);
+    const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    renderer.useObserveResize();
+    useResizeObserver(canvas.value!, render);
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.PatternsEditor,
@@ -53,7 +54,7 @@ onMounted(() => {
     function render() {
         if (!props.editorVisible) return;
         if (!canvas.value) return;
-        renderer.startRender();
+        renderer.startRender(canvas.value!);
         const accent = window.getComputedStyle(canvas.value!).getPropertyValue("--color-accent");
         const beatsPerScreen = Math.ceil(canvas.value!.offsetWidth / props.zoomX) + 1;
         const firstBeatOffset = props.scrollX % 96;
@@ -84,12 +85,12 @@ onMounted(() => {
             const selected = getWorkspace().selectedClips.has(clip);
             if (canvas.value!.offsetHeight > 30) {
                 renderer.fillRoundRect(clipX + 1, 1, clipWidth - 2, 12, 4, getTrack().trackColor ?? accent);
-                renderer.ctx.globalAlpha = 0.5;
+                renderer.ctx!.globalAlpha = 0.5;
                 renderer.begin()
                 .roundRect(clipX + 1, 1, clipWidth - 2, canvas.value!.offsetHeight - 2, 4)
                 .fill(getTrack().trackColor ?? accent);
                 
-                renderer.ctx.globalAlpha = 1;
+                renderer.ctx!.globalAlpha = 1;
                 renderer.stroke(selected? selectedOutline : normalOutline, 2).end();
                 renderer.fillText(clipName, textX + 5, 11, "12px Nunito Sans", "#000000");
 

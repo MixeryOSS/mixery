@@ -8,7 +8,7 @@ import { Units, type ClippedNote, type NotesClip } from '@mixery/engine';
 import { computed, onMounted, ref, watch, type ShallowRef, render } from 'vue';
 import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
 import { MidiText } from '../../MidiText';
-import { useTrackableXY } from '../../composes';
+import { useParentState, useResizeObserver, useTrackableXY } from '../../composes';
 import { Tools } from "../../../handling/Tools";
 import type { ToolContext, ToolObject } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
@@ -34,6 +34,7 @@ const scrollHandleY = ref<HTMLDivElement>();
 const zoomHandle = ref<HTMLSpanElement>();
 const canvasRenderer = ref<CanvasRenderer>();
 
+const visible = useParentState("visible", props, emits);
 const seekUpdateHandle = ref(0);
 const scrollX = ref(0); // TODO track time instead
 const scrollY = ref(0);
@@ -98,9 +99,9 @@ const toolContext: ToolContext = {
 };
 
 onMounted(() => {
-    const renderer = new CanvasRenderer(canvas.value!, render);
+    const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    renderer.useObserveResize();
+    useResizeObserver(canvas.value!, render);
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.SeekPointer,
@@ -120,7 +121,7 @@ onMounted(() => {
     function render() {
         if (!props.visible) return;
         if (!canvas.value) return;
-        renderer.startRender();
+        renderer.startRender(canvas.value!);
         const editingClip = getEditingClip();
         clipDuration.value = editingClip?.durationUnit ?? 0;
         const fancy = getWorkspace().settings.fancyRendering;
@@ -189,7 +190,7 @@ onMounted(() => {
             if (noteY < -zoomY.value || noteWidth <= 0) return;
 
             const noteName = MidiText.midiToNoteName(note.midiIndex);
-            const noteNameWidth = renderer.ctx.measureText(noteName).width;
+            const noteNameWidth = renderer.ctx!.measureText(noteName).width;
             renderer.begin()
             .roundRect(pianoWidth.value + noteX + 1, noteY + 1, noteWidth - 2, zoomY.value - 2, 4)
             .fill(note.noteColor ?? accent)
@@ -279,6 +280,7 @@ watch(scrollY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys
 watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(zoomY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(pianoWidth, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+watch(visible, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 
 getWorkspace().rendering.registerCallback([RenderingHelper.Keys.SeekPointer], () => {
     seekUpdateHandle.value++;
@@ -364,12 +366,12 @@ function onCanvasMouseUp(event: PointerEvent) {
 </script>
 
 <template>
-    <MixeryWindow title="Piano Roll" :width=900 :height=500 resizable :visible=props.visible>
+    <MixeryWindow title="Piano Roll" :width=900 :height=500 resizable :visible=visible>
         <template v-slot:title-left>
             <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
         </template>
         <template v-slot:title-right>
-            <TitlebarButton @click="emits('update:visible', !props.visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
+            <TitlebarButton @click="emits('update:visible', !visible)" is-icon><MixeryIcon type="close" /></TitlebarButton>
         </template>
         <template v-slot:toolsbars>
             <WindowToolsbar>

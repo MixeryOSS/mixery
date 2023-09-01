@@ -46,6 +46,38 @@ export function useTrackableXY(elem: HTMLElement, x?: Ref<number>, y?: Ref<numbe
     }
 }
 
+export function useTrackableXYv2(x?: Ref<number>, y?: Ref<number>, options?: UseTrackableXYOptions) {
+    const minX = options?.minX ?? Number.NEGATIVE_INFINITY;
+    const maxX = options?.maxX ?? Number.POSITIVE_INFINITY;
+    const minY = options?.minY ?? Number.NEGATIVE_INFINITY;
+    const maxY = options?.maxY ?? Number.POSITIVE_INFINITY;
+
+    return function(event: PointerEvent) {
+        let mouseMove: (event: PointerEvent) => any;
+        let mouseUp: (event: PointerEvent) => any;
+
+        document.addEventListener("pointermove", mouseMove = event => {
+            let scale = event.shiftKey
+                ? (options?.shiftScale ?? 1.0)
+                : event.ctrlKey? (options?.ctrlScale ?? 1.0)
+                : (options?.scale ?? 1.0);
+            if (x) x.value = Math.max(Math.min(x.value + event.movementX * scale, maxX), minX);
+            if (y) y.value = Math.max(Math.min(y.value + event.movementY * scale, maxY), minY);
+        });
+
+        document.addEventListener("pointerup", mouseUp = event => {
+            document.removeEventListener("pointermove", mouseMove);
+            document.removeEventListener("pointerup", mouseUp);
+        });
+    }
+}
+
+export function useResizeObserver(target: HTMLElement, callback: ResizeObserverCallback) {
+    let observer = new ResizeObserver(callback);
+    observer.observe(target);
+    return observer;
+}
+
 export function useParentState<T>(
     key: string,
     props: { [x: string]: any },
