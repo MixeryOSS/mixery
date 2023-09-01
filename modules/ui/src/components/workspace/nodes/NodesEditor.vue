@@ -402,11 +402,12 @@ function onWheel(event: WheelEvent) {
     if (event.ctrlKey) {
         let zoomDelta = event.shiftKey? wheelX : wheelY;
         zoomRatio.value = Math.max(zoomRatio.value - zoomDelta / (isTouchpad? 50 : 200), 0.1);
-        event.preventDefault();
     } else {
         x.value -= wheelX / zoomRatio.value;
         y.value -= wheelY / zoomRatio.value;
     }
+    
+    event.preventDefault();
 }
 
 function deleteNode(node: INode<any, any>) {
