@@ -17,13 +17,18 @@ export namespace MixeryUI {
         // Nodes network
         const audioInputNode = new AudioSourceNode(project.nodes.generateNodeId(), ws.audio);
         audioInputNode.data.channelName = "Default Channel";
+        audioInputNode.nodeX = -50;
         audioInputNode.nodeY = -100;
+
         const midiInputNode = new NotesSourceNode(project.nodes.generateNodeId());
         midiInputNode.data.channelName = "Default Channel";
+        midiInputNode.nodeX = -200;
+
         const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
-        pluckNode.nodeX = 150;
+        pluckNode.nodeX = -50;
+
         const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), ws.audio);
-        speakerNode.nodeX = 300;
+        speakerNode.nodeX = 100;
 
         project.nodes.nodes.push(audioInputNode, midiInputNode, pluckNode, speakerNode);
         project.nodes.connect(midiInputNode.midiOut, pluckNode.midiIn);
