@@ -11,7 +11,7 @@ import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
 import KeybindsBar from "./keybinds/KeybindsBar.vue";
 
-import { computed, ref, triggerRef, watch } from "vue";
+import { computed, nextTick, ref, triggerRef, watch } from "vue";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
 import { traverse } from "@/utils";
 import { MixeryUI } from "@/handling/MixeryUI";
@@ -79,6 +79,9 @@ const settingsWindowVisible = ref(false);
 
 watch(reactiveBpm, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.SeekPointer));
 watch(sharedSeekPointer, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.SeekPointer));
+watch(pianoRollVisible, () => nukeAllKeybindsIfEmpty());
+watch(patternEditorVisible, () => nukeAllKeybindsIfEmpty());
+watch(nodesEditorVisible, () => nukeAllKeybindsIfEmpty());
 
 function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
     const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button"), v => v.parentElement);
@@ -177,7 +180,19 @@ function openProject() {
 function handleKeydown(event: KeyboardEvent) { getWorkspace().keyboardHandler.keydown(event); }
 function handleKeyup(event: KeyboardEvent) { getWorkspace().keyboardHandler.keyup(event); }
 
-// Workspace keybinds
+// Keybinds
+const windowsContainer = ref<InstanceType<typeof WindowsContainer>>();
+
+function nukeAllKeybindsIfEmpty() {
+    nextTick(() => {
+        const div = windowsContainer.value!.$el as HTMLDivElement;
+        if (!div.lastElementChild) {
+            getWorkspace().windowKeybinds.keybinds = [];
+            keybindsUpdateHandle.value++;
+        }
+    });
+}
+
 getWorkspace().workspaceKeybinds.keybinds = [
     {
         id: "mixery:workspace_play_stop",
@@ -279,20 +294,22 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
             <Suspense>
                 <ExplorerPane :workspace-id="props.workspaceId" :update-handle="explorerPaneUpdateHandle" />
             </Suspense>
-            <WindowsContainer class="wcontainer">
+            <WindowsContainer class="wcontainer" ref="windowsContainer">
                 <PatternEditor
                     v-model:visible="patternEditorVisible"
                     :workspace-id="props.workspaceId"
                     :seek-pointer="sharedSeekPointer"
-                    @update:seek-pointer="sliders$changeTime($event)"
                     :reactive-bpm="reactiveBpm"
+                    @update:seek-pointer="sliders$changeTime($event)"
+                    @update-keybinds="keybindsUpdateHandle++"
                 />
                 <PianoRoll
                     v-model:visible="pianoRollVisible"
                     :workspace-id="props.workspaceId"
                     :seek-pointer="sharedSeekPointer"
-                    @update:seek-pointer="sliders$changeTime($event)"
                     :reactive-bpm="reactiveBpm"
+                    @update:seek-pointer="sliders$changeTime($event)"
+                    @update-keybinds="keybindsUpdateHandle++"
                 />
                 <NodesEditor
                     v-model:visible="nodesEditorVisible"
@@ -300,7 +317,8 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                     v-model:context-menu="contextMenu"
                     v-model:context-menu-x="contextMenuX"
                     v-model:context-menu-y="contextMenuY"
-                    v-model:update-handle="nodesEditorUpdateHandle" />
+                    v-model:update-handle="nodesEditorUpdateHandle"
+                    @update-keybinds="keybindsUpdateHandle++" />
                 <SettingsWindow :workspace-id="props.workspaceId" v-model:visible="settingsWindowVisible" />
             </WindowsContainer>
         </div>

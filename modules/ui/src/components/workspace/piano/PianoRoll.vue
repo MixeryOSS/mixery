@@ -22,7 +22,7 @@ const props = defineProps<{
     seekPointer: number,
     reactiveBpm: number
 }>();
-const emits = defineEmits(["update:visible", "update:seekPointer"]);
+const emits = defineEmits(["update:visible", "update:seekPointer", "updateKeybinds"]);
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
 function getProject() { return getWorkspace().project; }
@@ -366,7 +366,10 @@ function onCanvasMouseUp(event: PointerEvent) {
 </script>
 
 <template>
-    <MixeryWindow title="Piano Roll" :width=900 :height=500 resizable :visible=visible>
+    <MixeryWindow title="Piano Roll" :width=900 :height=500 resizable :visible=visible @focused="
+    getWorkspace().windowKeybinds.keybinds = [];
+    emits('updateKeybinds');
+    ">
         <template v-slot:title-left>
             <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
         </template>

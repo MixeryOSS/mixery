@@ -20,7 +20,7 @@ const props = defineProps<{
     seekPointer: number,
     reactiveBpm: number
 }>();
-const emits = defineEmits(["update:visible", "clip-select", "update:seekPointer"]);
+const emits = defineEmits(["update:visible", "clip-select", "update:seekPointer", "updateKeybinds"]);
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
 function getProject() { return getWorkspace().project; }
@@ -132,7 +132,10 @@ watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.P
 </script>
 
 <template>
-    <MixeryWindow title="Patterns" :width="900" :height="500" resizable :visible="props.visible">
+    <MixeryWindow title="Patterns" :width="900" :height="500" resizable :visible="props.visible" @focused="
+    getWorkspace().windowKeybinds.keybinds = [];
+    emits('updateKeybinds');
+    ">
         <template v-slot:title-left>
             <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
         </template>

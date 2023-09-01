@@ -23,12 +23,12 @@ const props = defineProps<{
     border-top: 2px solid #070707;
     background-color: #ffffff0f;
     display: flex;
-    padding: 0 8px;
     user-select: none;
-
+    
     .keybind {
         font-size: 12px;
-
+        padding: 0 8px;
+        
         > * {
             height: 24px;
             vertical-align: top;

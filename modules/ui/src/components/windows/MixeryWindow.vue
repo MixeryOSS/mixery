@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useTrackableXYv2 } from "../composes";
 import { traverse } from "@/utils";
 
@@ -12,6 +12,8 @@ const props = defineProps<{
     resizable: boolean,
     visible: boolean
 }>();
+
+const emits = defineEmits(["focused"]);
 
 const visible = computed(() => props.visible);
 const width = ref(props.width ?? 0);
@@ -29,7 +31,10 @@ const trackableResizeHandle = useTrackableXYv2(width, height, { minY: 64 });
 function bringMeToTheTop() {
     if (!root.value) return;
     const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
-    if (traversed && traversed.lastElementChild != root.value) traversed.append(root.value);
+    if (traversed && traversed.lastElementChild != root.value) {
+        traversed.append(root.value);
+        emits("focused");
+    }
 }
 
 function rootClick(event: PointerEvent) {
@@ -38,7 +43,21 @@ function rootClick(event: PointerEvent) {
 
 watch(visible, newVal => {
     if (!newVal) return;
+    emits("focused");
     nextTick(() => bringMeToTheTop());
+});
+
+onMounted(() => {
+    if (!root.value) return;
+    const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
+    if (traversed && traversed.lastElementChild == root.value) emits("focused");
+
+    let childrenObserver = new MutationObserver(() => {
+        if (!root.value) return;
+        const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
+        if (traversed && traversed.lastElementChild == root.value) emits("focused");
+    });
+    childrenObserver.observe(root.value.parentElement!, { childList: true });
 });
 </script>
 

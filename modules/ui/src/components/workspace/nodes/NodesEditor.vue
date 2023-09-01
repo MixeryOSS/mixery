@@ -27,7 +27,8 @@ const emits = defineEmits([
     "update:contextMenu",
     "update:contextMenuX",
     "update:contextMenuY",
-    "update:updateHandle"
+    "update:updateHandle",
+    "updateKeybinds"
 ]);
 
 const visible = useParentState("visible", props, emits);
@@ -445,7 +446,22 @@ function navigateUp(index: number) {
 </script>
 
 <template>
-    <MixeryWindow title="Nodes" :width="900" :height="500" resizable :visible="visible">
+    <MixeryWindow title="Nodes" :width="900" :height="500" resizable :visible="visible" @focused="
+    getWorkspace().windowKeybinds.keybinds = [
+        {
+            id: 'mixery:delete_node',
+            name: 'Delete Node',
+            defaultKeybind: 'Delete',
+            keydown(event) {
+                const node = getWorkspace().selectedNode;
+                if (node) deleteNode(node);
+                getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);
+                return true;
+            },
+        }
+    ];
+    emits('updateKeybinds');
+    ">
         <template v-slot:title-left>
             <TitlebarButton is-icon><MixeryIcon type="menu" /></TitlebarButton>
         </template>
