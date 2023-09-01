@@ -9,6 +9,7 @@ import PatternEditor from "./pattern/PatternEditor.vue";
 import NodesEditor from "./nodes/NodesEditor.vue";
 import SettingsWindow from "./SettingsWindow.vue";
 import ContextMenu from "../contextmenus/ContextMenu.vue";
+import KeybindsBar from "./keybinds/KeybindsBar.vue";
 
 import { computed, ref, triggerRef, watch } from "vue";
 import type { ContextMenuEntry } from "../contextmenus/ContextMenuEntry";
@@ -31,6 +32,7 @@ const contextMenuY = ref(0);
 const updateThing = ref(0); // Dirty way to update
 const explorerPaneUpdateHandle = ref(0);
 const nodesEditorUpdateHandle = ref(0);
+const keybindsUpdateHandle = ref(0);
 
 const reactiveBpm = computed(() => {
     updateThing.value;
@@ -55,6 +57,7 @@ const metronome = computed({
         getWorkspace().workspace.metronome.enabled = v;
     }
 });
+const allKeybinds = computed(() => { keybindsUpdateHandle.value; return getWorkspace().keyboardHandler.getAllKeybinds(); });
 
 function sliders$changeBpm(bpm: number) {
     const ws = getWorkspace();
@@ -171,6 +174,23 @@ function openProject() {
     };
 }
 
+function handleKeydown(event: KeyboardEvent) { getWorkspace().keyboardHandler.keydown(event); }
+function handleKeyup(event: KeyboardEvent) { getWorkspace().keyboardHandler.keyup(event); }
+
+// Workspace keybinds
+getWorkspace().workspaceKeybinds.keybinds = [
+    {
+        id: "mixery:workspace_play_stop",
+        name: "Play/Stop",
+        defaultKeybind: "Space",
+        async keydown(event) {
+            if (!isPlaying.value) await playButton();
+            else await stopButton();
+            return true;
+        },
+    }
+];
+
 getWorkspace().workspace.metronome.node?.midiIn.onNoteEvent.listen(note => {
     if (note.signalType == "instant") flashMetronomeButton();
     else if (note.signalType == "delayed") setTimeout(() => flashMetronomeButton(), note.delayMs);
@@ -188,7 +208,7 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
 </script>
 
 <template>
-    <div class="workspace" ref="root">
+    <div class="workspace" ref="root" tabindex="0" @keydown="handleKeydown" @keyup="handleKeyup">
         <div class="toolsbar">
             <WorkspaceToolsbarButton
                 is-icon accent
@@ -284,6 +304,7 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                 <SettingsWindow :workspace-id="props.workspaceId" v-model:visible="settingsWindowVisible" />
             </WindowsContainer>
         </div>
+        <KeybindsBar :keybinds="allKeybinds" />
         <ContextMenu
             :x="contextMenuX"
             :y="contextMenuY"

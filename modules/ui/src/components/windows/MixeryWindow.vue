@@ -26,18 +26,24 @@ const resizeHandle = ref<HTMLDivElement>();
 const trackableWindowPosition = useTrackableXYv2(x, y, { minX: 0, minY: 0 });
 const trackableResizeHandle = useTrackableXYv2(width, height, { minY: 64 });
 
+function bringMeToTheTop() {
+    if (!root.value) return;
+    const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
+    if (traversed && traversed.lastElementChild != root.value) traversed.append(root.value);
+}
+
+function rootClick(event: PointerEvent) {
+    bringMeToTheTop();
+}
+
 watch(visible, newVal => {
     if (!newVal) return;
-    nextTick(() => {
-        if (!root.value) return;
-        const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
-        if (traversed && traversed.lastElementChild != root.value) traversed.append(root.value);
-    });
+    nextTick(() => bringMeToTheTop());
 });
 </script>
 
 <template>
-    <div class="window" ref="root" v-if="props.visible" :style="{
+    <div class="window" ref="root" v-if="props.visible" @pointerdown="rootClick" :style="{
         width: `${width}px`,
         height: `${height}px`,
         left: `${x}px`,

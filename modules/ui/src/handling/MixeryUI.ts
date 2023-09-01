@@ -1,5 +1,6 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
 import { Project, Workspace, type Clip, Player, type INode, SpeakerNode, PluckNode, type NotesClip, AudioSourceNode, NotesSourceNode, NodesNetwork } from "@mixery/engine";
+import { KeyboardHandler, type KeybindsContainer } from "./KeyboardHandler";
 
 export namespace MixeryUI {
     /**
@@ -45,6 +46,11 @@ export namespace MixeryUI {
         project: Project;
         player: Player;
 
+        // Workspace
+        keyboardHandler = new KeyboardHandler();
+        workspaceKeybinds: KeybindsContainer;
+        windowKeybinds: KeybindsContainer;
+
         // Editors
         selectedClips: Set<Clip> = new Set(); // Patterns editor
         selectedNode: INode<any, any> | undefined; // Nodes editor, TODO multiple nodes
@@ -59,6 +65,9 @@ export namespace MixeryUI {
             this.project = createNewProject(workspace);
             this.player = new Player(this.project);
             this.nodesStack = [this.project.nodes];
+
+            this.workspaceKeybinds = this.keyboardHandler.newContainer();
+            this.windowKeybinds = this.keyboardHandler.newContainer();
         }
 
         setProject(project: Project): void {
