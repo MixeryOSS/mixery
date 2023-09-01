@@ -134,7 +134,7 @@ onMounted(() => {
         renderer.fillRect(x.value - 1, y.value - 10, 2, 20, centerColor);
 
         getCurrentGroup().nodes.forEach(node => internal.drawNode(renderer, node, getWorkspace(), x.value, y.value));
-        getCurrentGroup().connections.forEach(wire => internal.drawWire(renderer, wire, getCurrentGroup(), x.value, y.value));
+        getCurrentGroup().connections.forEach(wire => internal.drawWire(renderer, wire, getCurrentGroup(), x.value, y.value, targettingWire));
 
         // Render dragging wire
         if (lastPort) {
@@ -518,7 +518,7 @@ canvas {
 
     &.wireCutterMode {
         cursor:
-            url(../../assets/cursors/scissor.svg) 17.5 17.5,
+            url(../../../assets/cursors/scissor.svg) 17.5 17.5,
             not-allowed;
     }
 }
