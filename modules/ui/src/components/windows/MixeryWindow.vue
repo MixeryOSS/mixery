@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useTrackableXYv2 } from "../composes";
+import { traverse } from "@/utils";
 
 const props = defineProps<{
     title: string,
@@ -12,6 +13,7 @@ const props = defineProps<{
     visible: boolean
 }>();
 
+const visible = computed(() => props.visible);
 const width = ref(props.width ?? 0);
 const height = ref(props.height ?? 0);
 const x = ref(props.x ?? 0);
@@ -22,7 +24,16 @@ const title = ref<HTMLDivElement>();
 const resizeHandle = ref<HTMLDivElement>();
 
 const trackableWindowPosition = useTrackableXYv2(x, y, { minX: 0, minY: 0 });
-const trackableResizeHandle = useTrackableXYv2(width, height, { minY: 64 })
+const trackableResizeHandle = useTrackableXYv2(width, height, { minY: 64 });
+
+watch(visible, newVal => {
+    if (!newVal) return;
+    nextTick(() => {
+        if (!root.value) return;
+        const traversed = traverse<HTMLElement>(root.value, v => v.classList.contains("container"), v => v.parentElement);
+        if (traversed && traversed.lastElementChild != root.value) traversed.append(root.value);
+    });
+});
 </script>
 
 <template>
