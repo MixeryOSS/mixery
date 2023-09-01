@@ -7,9 +7,13 @@ export namespace internal {
         const { nodeX, nodeY } = node;
         const inputs = node.getInputPorts();
         const outputs = node.getOutputPorts();
+        const totalPorts = inputs.length + outputs.length;
         const renderX = nodeX + x, renderY = nodeY + y;
         const renderWidth = node.nodeWidth;
-        const renderHeight = 22 + (inputs.length + outputs.length) * 18;
+        const renderHeight = totalPorts > 0
+            ? 22 + totalPorts * 18
+            : node.typeId == GroupNode.ID? 48
+            : 17;
         return { renderX, renderY, renderWidth, renderHeight };
     }
 
@@ -67,6 +71,13 @@ export namespace internal {
         renderer.fillText(nodeName, renderX + 4, renderY + 12, "12px Nunito Sans", "#ffffff");
 
         if (node.typeId == GroupNode.ID) {
+            if (node.getInputPorts().length + node.getOutputPorts().length == 0) {
+                renderer.ctx.textAlign = "center";
+                renderer.fillText("Double-click to", renderX + renderWidth / 2, renderY + 12 + 17, "12px Nunito Sans", "#ffffff");
+                renderer.fillText("edit this group", renderX + renderWidth / 2, renderY + 12 + 30, "12px Nunito Sans", "#ffffff");
+                renderer.ctx.textAlign = "left";
+            }
+
             renderer.begin()
             .rect(renderX + renderWidth - 12 + 0.5, renderY + 4 + 0.5, 6, 6)
             .rect(renderX + renderWidth - 14 + 0.5, renderY + 6 + 0.5, 6, 6)
