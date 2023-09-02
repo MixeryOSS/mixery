@@ -5,7 +5,7 @@ import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import FancyScrollbar from '../universal/FancyScrollbar.vue';
 import { Units, type ClippedNote, type NotesClip } from '@mixery/engine';
-import { computed, onMounted, ref, watch, type ShallowRef, render } from 'vue';
+import { computed, onMounted, ref, watch, type ShallowRef, render, toRaw } from 'vue';
 import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
 import { MidiText } from '../../MidiText';
 import { useParentState, useResizeObserver, useTrackableXY } from '../../composes';
@@ -70,8 +70,12 @@ const toolContext: ToolContext = {
     createObject() {
         let note: ClippedNote = { midiIndex: 0, startAtUnit: 0, durationUnit: 0, velocity: 0.8 };
         const selectedClip = getEditingClip();
-        if (selectedClip) selectedClip.notes.push(note);
-        return new internal.NoteObject(note);
+        if (selectedClip) {
+            selectedClip.notes.push(note);
+            return new internal.NoteObject(selectedClip, note);
+        } else {
+            return new internal.NoteObject(undefined, note);
+        }
     },
     deleteObject(obj) {
         const selectedClip = getEditingClip();
@@ -83,7 +87,7 @@ const toolContext: ToolContext = {
         const selectedClip = getEditingClip();
         if (!selectedClip) return;
         let note = selectedClip.notes.find(v => v.midiIndex == trackPosition && position >= v.startAtUnit && position < v.startAtUnit + v.durationUnit);
-        return note? new internal.NoteObject(note) : undefined;
+        return note? new internal.NoteObject(selectedClip, note) : undefined;
     },
     clearSelection() {
         // TODO
@@ -332,7 +336,7 @@ function canvasMouse(event: PointerEvent, cb: (position: number, midiIndex: numb
 function onCanvasMouseDown(event: PointerEvent) {
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
-    canvasMouse(event, (position, midi) => selectedTool.value.onMouseDown(toolContext, event.buttons, position, midi));
+    canvasMouse(event, (position, midi) => toRaw(selectedTool).value.onMouseDown(toolContext, event.buttons, position, midi));
     
     getWorkspace().rendering.redrawRequest(
         RenderingHelper.Keys.PianoRoll,
@@ -343,7 +347,7 @@ function onCanvasMouseMove(event: PointerEvent) {
     event.preventDefault();
     canvasRenderer.value!.mouseX = event.offsetX;
     canvasRenderer.value!.mouseY = event.offsetY;
-    canvasMouse(event, (position, midi) => selectedTool.value.onMouseMove(toolContext, event.buttons, position, midi));
+    canvasMouse(event, (position, midi) => toRaw(selectedTool).value.onMouseMove(toolContext, event.buttons, position, midi));
     
     getWorkspace().rendering.redrawRequest(
         RenderingHelper.Keys.PianoRoll,
@@ -352,7 +356,7 @@ function onCanvasMouseMove(event: PointerEvent) {
 }
 function onCanvasMouseUp(event: PointerEvent) {
     event.preventDefault();
-    canvasMouse(event, (position, midi) => selectedTool.value.onMouseUp(toolContext, event.buttons, position, midi));
+    canvasMouse(event, (position, midi) => toRaw(selectedTool).value.onMouseUp(toolContext, event.buttons, position, midi));
     if (event.pointerType != "mouse") {
         canvasRenderer.value!.mouseX = -1;
         canvasRenderer.value!.mouseY = -1;

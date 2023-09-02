@@ -1,9 +1,13 @@
 import type { ToolObject } from "@/handling/ITool";
-import type { ClippedNote } from "@mixery/engine";
+import type { ClippedNote, NotesClip } from "@mixery/engine";
+import { toRaw } from "vue";
 
 export namespace internal {
     export class NoteObject implements ToolObject {
-        constructor(public readonly unwrap: ClippedNote) {}
+        constructor(
+            private readonly _selectedClip: NotesClip | undefined,
+            public readonly unwrap: ClippedNote
+        ) {}
     
         get startPosition(): number { return this.unwrap.startAtUnit; }
         set startPosition(v: number) { this.unwrap.startAtUnit = v; }
@@ -15,7 +19,9 @@ export namespace internal {
         set trackPosition(v: number) { this.unwrap.midiIndex = v; }
 
         createCopy(): NoteObject {
-            return new NoteObject(structuredClone(this.unwrap));
+            const cloned = structuredClone(toRaw(this.unwrap));
+            if (this._selectedClip) this._selectedClip.notes.push(cloned);
+            return new NoteObject(this._selectedClip, cloned);
         }
     }
 }
