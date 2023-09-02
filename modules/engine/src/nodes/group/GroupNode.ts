@@ -26,8 +26,8 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
     inputs: GroupInputsNode;
     outputs: GroupOutputsNode;
 
-    constructor(public readonly nodeId: string) {
-        this.children = new NodesNetwork();
+    constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
+        this.children = new NodesNetwork(audioContext.createGain());
         this.children.networkName = "Group";
 
         this.inputs = new GroupInputsNode(); this.inputs.group = this;
@@ -56,11 +56,11 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         return {
             typeId: GroupNode.ID,
             label: "Group",
-            createNew(project, nodeId) {
-                return new GroupNode(nodeId);
+            createNew(project, context, nodeId) {
+                return new GroupNode(nodeId, project.workspace.audio);
             },
-            async createExisting(project, nodeId, data) {
-                const node = new GroupNode(nodeId);
+            async createExisting(project, context, nodeId, data) {
+                const node = new GroupNode(nodeId, project.workspace.audio);
                 node.children.nodes = [];
                 await node.children.load(data.children, project);
                 node.inputs = node.children.nodes.find(v => v.nodeId == "inputs") as GroupInputsNode;

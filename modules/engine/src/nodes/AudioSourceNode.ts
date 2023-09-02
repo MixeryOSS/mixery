@@ -61,10 +61,10 @@ export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeDa
         return {
             typeId: AudioSourceNode.ID,
             label: "Audio Source",
-            createNew(project, nodeId) {
+            createNew(project, context, nodeId) {
                 return new AudioSourceNode(nodeId, project.workspace.audio);
             },
-            createExisting(project, nodeId, data) {
+            createExisting(project, context, nodeId, data) {
                 const node = new AudioSourceNode(nodeId, project.workspace.audio);
                 node.data = structuredClone(data);
                 return node;

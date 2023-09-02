@@ -73,10 +73,10 @@ export abstract class GroupIONode implements INode<GroupIONode, GroupIONodeData>
             typeId: typeId,
             hidden: true, // We don't want user to create these special nodes
             label: "",
-            createNew(project, nodeId) {
+            createNew(project, context, nodeId) {
                 return createNew();
             },
-            createExisting(project, nodeId, data) {
+            createExisting(project, context, nodeId, data) {
                 const node = createNew();
                 node.outToIn = outToIn;
                 node.bridges = data.bridges;

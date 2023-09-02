@@ -1,4 +1,4 @@
-import { Project, Workspace } from "../index.js";
+import { NodesNetworkContext, Project, Workspace } from "../index.js";
 import { Identifier } from "../types.js";
 import { IPort } from "./ports/IPort.js";
 
@@ -53,11 +53,13 @@ export type INodeAny = INode<any, any>;
 
 export type NewNodeFactory<T extends INode<T, TData>, TData> = (
     project: Project,
+    context: NodesNetworkContext,
     nodeId: string
 ) => T | Promise<T>;
 
 export type NodeFromDataFactory<T extends INode<T, TData>, TData> = (
     project: Project,
+    context: NodesNetworkContext,
     nodeId: string,
     data: TData
 ) => T | Promise<T>;

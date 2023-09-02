@@ -185,7 +185,11 @@ function addNode(event: MouseEvent) {
         entries.push({
             label: factory.label,
             async onClick() {
-                const createTask = factory.createNew(getWorkspace().project, getCurrentGroup().generateNodeId());
+                const createTask = factory.createNew(
+                    getWorkspace().project,
+                    { audioOut: getCurrentGroup().audioOut },
+                    getCurrentGroup().generateNodeId()
+                );
                 if (createTask instanceof Promise) getWorkspace().workspace.loadingManager.add(createTask);
                 const node = (await createTask) as INode<any, any>;
                 node.nodeX = -x.value - node.nodeWidth / 2;

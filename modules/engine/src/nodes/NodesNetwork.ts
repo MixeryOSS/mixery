@@ -10,6 +10,9 @@ export class NodesNetwork {
     viewY: number = 0;
 
     #idGenCounter = 0;
+
+    constructor(public readonly audioOut: AudioNode) {}
+
     generateNodeId() {
         return `snowflake-${Date.now()}-${this.#idGenCounter++}`;
     }
@@ -86,6 +89,7 @@ export class NodesNetwork {
         this.viewX = saved.viewX ?? 0;
         this.viewY = saved.viewY ?? 0;
         this.connections = structuredClone(saved.connections);
+        const context: NodesNetworkContext = { audioOut: this.audioOut };
 
         await Promise.all(Object.keys(saved.nodes).map(async nodeId => {
             let savedNode = saved.nodes[nodeId];
@@ -97,6 +101,7 @@ export class NodesNetwork {
 
             let node = await factory.createExisting(
                 project,
+                context,
                 nodeId,
                 savedNode.data
             );
@@ -141,4 +146,8 @@ interface SavedNode {
     nodeX: number;
     nodeY: number;
     data: any;
+}
+
+export interface NodesNetworkContext {
+    readonly audioOut: AudioNode;
 }

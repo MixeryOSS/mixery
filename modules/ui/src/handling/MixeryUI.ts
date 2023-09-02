@@ -27,7 +27,7 @@ export namespace MixeryUI {
         const pluckNode = new PluckNode(project.nodes.generateNodeId(), ws.audio);
         pluckNode.nodeX = -50;
 
-        const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), ws.audio);
+        const speakerNode = new SpeakerNode(project.nodes.generateNodeId(), project.nodes.audioOut);
         speakerNode.nodeX = 100;
 
         project.nodes.nodes.push(audioInputNode, midiInputNode, pluckNode, speakerNode);

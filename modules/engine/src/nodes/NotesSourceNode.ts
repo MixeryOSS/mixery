@@ -55,10 +55,10 @@ export class NotesSourceNode implements INode<NotesSourceNode, NotesSourceNodeDa
         return {
             typeId: NotesSourceNode.ID,
             label: "Notes Source",
-            createNew(workspace, nodeId) {
+            createNew(workspace, context, nodeId) {
                 return new NotesSourceNode(nodeId);
             },
-            createExisting(workspace, nodeId, data) {
+            createExisting(workspace, context, nodeId, data) {
                 const node = new NotesSourceNode(nodeId);
                 node.data = structuredClone(data);
                 return node;

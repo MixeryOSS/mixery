@@ -8,12 +8,13 @@ import { Workspace } from "./Workspace.js";
 export class Project {
     metadata: ProjectMetadata = {};
     bpm: number = 120;
-    nodes: NodesNetwork = new NodesNetwork();
+    nodes: NodesNetwork;
     playlist: Playlist = {tracks: []};
     projectResources: IResourcesStore;
     resourcesManager: ResourcesManager;
 
     constructor(public readonly workspace: Workspace) {
+        this.nodes = new NodesNetwork(workspace.audio.destination);
         this.projectResources = new MemoryResourcesStore("project", {
             async decodeAudioData(blob) {
                 return await workspace.audio.decodeAudioData(await blob.arrayBuffer());
@@ -46,7 +47,7 @@ export class Project {
         this.metadata = structuredClone(saved.metadata);
         this.bpm = saved.bpm;
         await ResourcesBundler.apply(this.projectResources, saved.resources);
-        this.nodes = await new NodesNetwork().load(saved.nodes, this);
+        this.nodes = await new NodesNetwork(this.workspace.audio.destination).load(saved.nodes, this);
         this.playlist = structuredClone(saved.playlist);
     }
 

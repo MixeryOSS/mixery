@@ -57,10 +57,10 @@ export class DebugNode implements INode<DebugNode, any> {
         return {
             typeId: DebugNode.ID,
             label: "Debug",
-            createNew(project, nodeId) {
+            createNew(project, context, nodeId) {
                 return new DebugNode(nodeId);
             },
-            createExisting(project, nodeId, data) {
+            createExisting(project, context, nodeId, data) {
                 return new DebugNode(nodeId);
             }
         };

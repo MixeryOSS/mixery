@@ -15,8 +15,8 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
 
     speakerPort: SignalPort;
 
-    constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
-        this.speakerPort = new SignalPort(this, "speaker", audioContext, audioContext.destination);
+    constructor(public readonly nodeId: string, audioOut: AudioNode) {
+        this.speakerPort = new SignalPort(this, "speaker", audioOut.context, audioOut);
         this.speakerPort.portName = "Destination";
         this.inputs.push(this.speakerPort);
     }
@@ -41,11 +41,11 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
         return {
             typeId: SpeakerNode.ID,
             label: "Speaker Output",
-            createNew(project, nodeId) {
-                return new SpeakerNode(nodeId, project.workspace.audio);
+            createNew(project, context, nodeId) {
+                return new SpeakerNode(nodeId, context.audioOut);
             },
-            createExisting(project, nodeId, data) {
-                return new SpeakerNode(nodeId, project.workspace.audio);
+            createExisting(project, context, nodeId, data) {
+                return new SpeakerNode(nodeId, context.audioOut);
             }
         };
     }
