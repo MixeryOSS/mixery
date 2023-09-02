@@ -1,5 +1,5 @@
-import { GlobalRegistries, IPort, Identifier, MidiPort, NodesNetwork, SavedNodesNetwork, SignalPort } from "../../index.js";
-import { INode, NodeControl, NodeFactory } from "../INode.js";
+import { GlobalRegistries, IPort, Identifier, MidiPort, NodesNetwork, NotesSourceNode, SavedNodesNetwork, SignalPort, SpeakerNode } from "../../index.js";
+import { INode, INodeAny, NodeControl, NodeFactory } from "../INode.js";
 import { GroupIONode, GroupInputsNode, GroupOutputsNode } from "./GroupIONode.js";
 
 interface GroupNodeSavedData {
@@ -26,6 +26,19 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
     inputs: GroupInputsNode;
     outputs: GroupOutputsNode;
 
+    // Synth mode
+    // Automatically applied when both Notes Source Input and Speaker Output nodes present
+    synthMidiIn: MidiPort;
+    synthAudioOut: SignalPort;
+    synthAudioGain: SignalPort;
+    get isSynth() {
+        if (!this.children.nodes.find(v => v.typeId == NotesSourceNode.ID)) return false;
+        if (!this.children.nodes.find(v => v.typeId == SpeakerNode.ID)) return false;
+        return true;
+    }
+
+    synthPlayingNotes: Map<number, GroupNode> = new Map();
+
     constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
         this.children = new NodesNetwork(audioContext.createGain());
         this.children.networkName = "Group";
@@ -33,6 +46,29 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         this.inputs = new GroupInputsNode(); this.inputs.group = this;
         this.outputs = new GroupOutputsNode(); this.outputs.group = this;
         this.children.nodes.push(this.inputs, this.outputs);
+
+        this.synthMidiIn = new MidiPort(this, "synthMidiIn");
+        this.synthMidiIn.portName = "MIDI (Synth)";
+
+        this.synthAudioOut = new SignalPort(this, "synthAudioOut", audioContext, this.children.audioOut);
+        this.synthAudioOut.portName = "Audio (Synth)";
+
+        this.synthAudioGain = new SignalPort(this, "synthAudioGain", audioContext, (this.synthAudioOut.socket as GainNode).gain);
+        this.synthAudioGain.portName = "Gain (Synth)";
+
+        this.synthMidiIn.onNoteEvent.listen(note => {
+            const { midiIndex } = note;
+            if (this.synthPlayingNotes.has(midiIndex)) {
+                if (note.eventType != "keyup") return;
+                this.synthPlayingNotes.get(midiIndex).children.sendNoteSignal("Default Channel", note);
+                this.synthPlayingNotes.delete(midiIndex);
+            } else if (note.eventType == "keydown") {
+                const noteGroup = this.createCopy();
+                noteGroup.children.audioOut.connect(this.children.audioOut as AudioNode);
+                noteGroup.children.sendNoteSignal("Default Channel", note);
+                this.synthPlayingNotes.set(midiIndex, noteGroup);
+            }
+        });
     }
 
     getControls(): NodeControl<any>[] {
@@ -40,15 +76,36 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
     }
 
     getInputPorts(): IPort<any>[] {
+        if (this.isSynth) return [this.synthMidiIn, this.synthAudioGain];
         return this.inputs.outsideNetwork;
     }
     
     getOutputPorts(): IPort<any>[] {
+        if (this.isSynth) return [this.synthAudioOut];
         return this.outputs.outsideNetwork;
     }
 
     saveNode(): GroupNodeSavedData {
         return { children: this.children.save() };
+    }
+
+    createCopy(): GroupNode {
+        const node = new GroupNode(this.nodeId, this.children.audioOut.context);
+
+        this.children.nodes.forEach(childToCopy => {
+            if (childToCopy instanceof GroupIONode) return; // TODO replicate io node to clone
+            const copiedChild = childToCopy.createCopy() as INodeAny;
+            node.children.nodes.push(copiedChild);
+        });
+
+        this.children.connections.forEach(conn => {
+            const from = node.children.select(conn.from[0], conn.from[1]);
+            const to = node.children.select(conn.to[0], conn.to[1]);
+            if (!from || !to) return;
+            node.children.connect(from, to, false);
+        });
+        
+        return node;
     }
 
     static createFactory(): NodeFactory<GroupNode, GroupNodeSavedData> {

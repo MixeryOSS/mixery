@@ -53,6 +53,10 @@ export class DebugNode implements INode<DebugNode, any> {
         return {};
     }
 
+    createCopy(): DebugNode {
+        return new DebugNode(this.nodeId);
+    }
+
     static createFactory(): NodeFactory<DebugNode, any> {
         return {
             typeId: DebugNode.ID,

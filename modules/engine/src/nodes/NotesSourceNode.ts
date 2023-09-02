@@ -51,6 +51,12 @@ export class NotesSourceNode implements INode<NotesSourceNode, NotesSourceNodeDa
         return structuredClone(this.data);
     }
 
+    createCopy(): NotesSourceNode {
+        const copy = new NotesSourceNode(this.nodeId);
+        copy.data = structuredClone(this.data);
+        return copy;
+    }
+
     static createFactory(): NodeFactory<NotesSourceNode, NotesSourceNodeData> {
         return {
             typeId: NotesSourceNode.ID,

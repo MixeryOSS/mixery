@@ -64,6 +64,10 @@ export abstract class GroupIONode implements INode<GroupIONode, GroupIONodeData>
         return { bridges };
     }
 
+    createCopy(): GroupIONode {
+        return null as any; // TODO pipe inputs from parent group
+    }
+
     static createFactory(
         typeId: Identifier,
         createNew: () => GroupIONode,

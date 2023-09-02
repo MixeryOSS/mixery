@@ -57,6 +57,12 @@ export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeDa
         return structuredClone(this.data);
     }
 
+    createCopy(): AudioSourceNode {
+        const node = new AudioSourceNode(this.nodeId, (this.audioOut.socket as GainNode).context);
+        node.data = structuredClone(this.data);
+        return node;
+    }
+
     static createFactory(): NodeFactory<AudioSourceNode, AudioSourceNodeData> {
         return {
             typeId: AudioSourceNode.ID,

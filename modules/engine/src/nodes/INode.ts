@@ -47,6 +47,12 @@ export interface INode<T extends INode<T, TData>, TData> {
      * `ArrayBuffer` and `TypedArray` (like `Uint8Array` for example).
      */
     saveNode(): TData;
+
+    /**
+     * Create a copy of this node. This method must NOT attempt to halt main thread because this
+     * will be used for synths, and each note must be played in real time.
+     */
+    createCopy(): T;
 }
 
 export type INodeAny = INode<any, any>;

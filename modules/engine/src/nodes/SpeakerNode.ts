@@ -37,6 +37,10 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
         return {}; // Return nothing
     }
 
+    createCopy(): SpeakerNode {
+        return new SpeakerNode(this.nodeId, this.speakerPort.socket as AudioNode);
+    }
+
     static createFactory(): NodeFactory<SpeakerNode, any> {
         return {
             typeId: SpeakerNode.ID,
