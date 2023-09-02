@@ -10,6 +10,7 @@ export * from "./misc/Units.js";
 export * from "./misc/Waveforms.js";
 
 export * from "./nodes/AudioSourceNode.js";
+export * from "./nodes/ConstantNode.js";
 export * from "./nodes/DebugNode.js";
 export * from "./nodes/INode.js";
 export * from "./nodes/NodesNetwork.js";
