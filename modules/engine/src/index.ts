@@ -19,6 +19,7 @@ export * from "./nodes/NodesNetwork.js";
 export * from "./nodes/NotesSourceNode.js";
 export * from "./nodes/PluckNode.js";
 export * from "./nodes/SpeakerNode.js";
+export * from "./nodes/UnpackNoteNode.js";
 
 export * from "./nodes/group/GroupIONode.js";
 export * from "./nodes/group/GroupNode.js";
