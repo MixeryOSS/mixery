@@ -47,7 +47,7 @@ export class GainNode implements INode<GainNode, number> {
     createCopy(): GainNode {
         const node = new GainNode(this.nodeId, (this.signalOutput.socket as AudioNode).context);
         (node.gain.socket as AudioParam).value = (this.gain.socket as AudioParam).value;
-        throw new Error("Method not implemented.");
+        return node;
     }
 
     static createFactory(): NodeFactory<GainNode, number> {
