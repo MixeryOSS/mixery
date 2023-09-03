@@ -1,6 +1,7 @@
 import { RenderingHelper } from "@/canvas/RenderingHelper";
 import { Project, Workspace, type Clip, Player, type INode, SpeakerNode, PluckNode, type NotesClip, AudioSourceNode, NotesSourceNode, NodesNetwork } from "@mixery/engine";
 import { KeyboardHandler, type KeybindsContainer } from "./KeyboardHandler";
+import { VirtualPianoKeyboard } from "./VirtualPianoKeyboard";
 
 export namespace MixeryUI {
     /**
@@ -53,6 +54,7 @@ export namespace MixeryUI {
 
         // Workspace
         keyboardHandler = new KeyboardHandler();
+        virtualPianoKeybinds: KeybindsContainer;
         workspaceKeybinds: KeybindsContainer;
         windowKeybinds: KeybindsContainer;
 
@@ -71,8 +73,11 @@ export namespace MixeryUI {
             this.player = new Player(this.project);
             this.nodesStack = [this.project.nodes];
 
+            this.virtualPianoKeybinds = this.keyboardHandler.newContainer();
             this.workspaceKeybinds = this.keyboardHandler.newContainer();
             this.windowKeybinds = this.keyboardHandler.newContainer();
+
+            VirtualPianoKeyboard.useMixeryLayout(this);
         }
 
         setProject(project: Project): void {
