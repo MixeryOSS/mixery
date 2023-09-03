@@ -71,10 +71,10 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
                 synthNote.group.children.sendNoteSignal("Default Channel", note);
                 synthNote.callbackThing.addEventListener("ended", () => {
                     synthNote.group.children.audioOut.disconnect(this.children.audioOut);
-                    this.synthPlayingNotes.delete(uid);
                 });
                 const releaseTime = Math.max(...synthNote.group.children.nodes.map(v => v.calculateReleaseTime? v.calculateReleaseTime() : 0));
                 synthNote.callbackThing.stop(this.children.audioOut.context.currentTime + delay + releaseTime / 1000);
+                this.synthPlayingNotes.delete(uid);
             } else if (note.eventType == "keydown") {
                 const synthNote: SynthPlayingNote = {
                     callbackThing: this.children.audioOut.context.createConstantSource(),
