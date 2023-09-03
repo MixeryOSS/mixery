@@ -1,6 +1,6 @@
 import { GlobalRegistries } from "../../index.js";
 import { Identifier } from "../../types.js";
-import { INode, NodeControl, NodeFactory } from "../INode.js";
+import { INode, NodeControl, NodeControls, NodeFactory } from "../INode.js";
 import { IPort } from "../ports/IPort.js";
 import { MidiPort } from "../ports/MidiPort.js";
 import { SignalPort } from "../ports/SignalPort.js";
@@ -13,12 +13,17 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
     nodeY: number = 0;
     nodeWidth: number = 100;
 
+    controls: NodeControl<any>[] = [];
+
     triggerIn: MidiPort;
     gainIn: SignalPort;
     freqIn: SignalPort;
     detuneIn: SignalPort;
 
     audioOut: SignalPort;
+
+    internalFrequency: ConstantSourceNode;
+    internalDetune: ConstantSourceNode;
 
     playingNotes: Map<bigint, OscillatorNode> = new Map();
 
@@ -56,10 +61,24 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
                 this.playingNotes.delete(uid);
             }
         });
+
+        this.controls.push(NodeControls.makeParamControl("Gain", (this.audioOut.socket as GainNode).gain));
+
+        this.internalFrequency = audio.createConstantSource();
+        this.controls.push(NodeControls.makeParamControl("Frequency", this.internalFrequency.offset));
+        this.internalFrequency.offset.value = 440;
+        this.internalFrequency.connect(this.freqIn.socket as AudioNode);
+        this.internalFrequency.start();
+
+        this.internalDetune = audio.createConstantSource();
+        this.controls.push(NodeControls.makeParamControl("Detune", this.internalDetune.offset));
+        this.internalDetune.offset.value = 0;
+        this.internalDetune.connect(this.detuneIn.socket as AudioNode);
+        this.internalDetune.start();
     }
 
     getControls(): NodeControl<any>[] {
-        return [];
+        return this.controls;
     }
 
     getInputPorts(): IPort<any>[] {

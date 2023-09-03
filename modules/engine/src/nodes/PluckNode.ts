@@ -1,5 +1,5 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort, Temperaments } from "../index.js";
-import { INode, NodeControl, NodeFactory } from "./INode.js";
+import { INode, NodeControl, NodeControls, NodeFactory } from "./INode.js";
 
 interface PluckNodeData {
     duration: number;
@@ -62,6 +62,7 @@ export class PluckNode implements INode<PluckNode, any> {
             get value() { return self.data.duration },
             set value(v) {self.data.duration = v; }
         });
+        this.controls.push(NodeControls.makeParamControl("Gain", this.audioGain.socket as AudioParam));
     }
 
     getControls(): NodeControl<any>[] {

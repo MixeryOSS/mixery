@@ -1,5 +1,5 @@
 import { GlobalRegistries, IPort, Identifier, SignalPort } from "../index.js";
-import { INode, NodeControl, NodeFactory } from "./INode.js";
+import { INode, NodeControl, NodeControls, NodeFactory } from "./INode.js";
 
 export class ConstantNode implements INode<ConstantNode, number> {
     static readonly ID = "mixery:constant";
@@ -14,15 +14,10 @@ export class ConstantNode implements INode<ConstantNode, number> {
     output: SignalPort;
 
     constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
-        const self = this;
         this.output = new SignalPort(this, "value", audioContext, this.backed = audioContext.createConstantSource());
         this.output.portName = "Value";
         this.backed.start();
-        this.control = {
-            label: "Value",
-            get value() { return self.backed.offset.value; },
-            set value(v) { self.backed.offset.value = v; }
-        };
+        this.control = NodeControls.makeParamControl("Value", this.backed.offset);
     }
 
     getControls(): NodeControl<any>[] {

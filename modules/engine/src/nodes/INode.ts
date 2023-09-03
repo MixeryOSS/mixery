@@ -85,3 +85,13 @@ export interface NodeControl<T extends (string | number)> {
     label: string;
     value: T;
 }
+
+export namespace NodeControls {
+    export function makeParamControl(label: string, param: AudioParam): NodeControl<number> {
+        return {
+            label,
+            get value() { return param.value; },
+            set value(v) { param.value = v; }
+        };
+    }
+}

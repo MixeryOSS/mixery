@@ -1,5 +1,5 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort, Workspace } from "../index.js";
-import { INode, NodeControl, NodeFactory } from "./INode.js";
+import { INode, NodeControl, NodeControls, NodeFactory } from "./INode.js";
 
 interface AudioSourceNodeData {
     channelName: string;
@@ -39,6 +39,8 @@ export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeDa
         this.audioGain = new SignalPort(this, "audioGain", audio, (this.audioOut.socket as GainNode).gain);
         this.audioGain.portName = "Gain";
         this.inputs.push(this.audioGain);
+
+        this.controls.push(NodeControls.makeParamControl("Gain", (this.audioOut.socket as GainNode).gain));
     }
 
     getControls(): NodeControl<any>[] {
