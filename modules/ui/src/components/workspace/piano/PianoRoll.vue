@@ -4,13 +4,13 @@ import TitlebarButton from '../../windows/TitlebarButton.vue';
 import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import FancyScrollbar from '../universal/FancyScrollbar.vue';
-import { Units, type ClippedNote, type NotesClip, NotesSourceNode } from '@mixery/engine';
-import { computed, onMounted, ref, watch, type ShallowRef, render, toRaw } from 'vue';
+import { Units, type ClippedNote, NotesSourceNode } from '@mixery/engine';
+import { computed, onMounted, ref, watch, toRaw, type WritableComputedRef } from 'vue';
 import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
 import { MidiText } from '../../MidiText';
-import { useParentState, useResizeObserver, useTrackableXY } from '../../composes';
+import { useParentState, useResizeObserver, useTrackableXYv2 } from '../../composes';
 import { Tools } from "../../../handling/Tools";
-import type { ToolContext, ToolObject } from '@/handling/ITool';
+import type { ToolContext } from '@/handling/ITool';
 import { Snapper } from '@/handling/Snapper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
@@ -41,9 +41,8 @@ function getProject() { return getWorkspace().project; }
 function getEditingClip() { return getWorkspace().editingNotesClip; }
 
 const canvas = ref<HTMLCanvasElement>();
-const scrollHandleX = ref<HTMLDivElement>();
 const scrollHandleY = ref<HTMLDivElement>();
-const zoomHandle = ref<HTMLSpanElement>();
+// const zoomHandle = ref<HTMLSpanElement>();
 const canvasRenderer = ref<CanvasRenderer>();
 
 const contextMenu = useParentState<ContextMenuEntry[]>("contextMenu", props, emits);
@@ -236,71 +235,6 @@ onMounted(() => {
             }
         });
     }
-
-    const computedScrollX = computed({
-        get() { return scrollX.value / 96 * zoomX.value; },
-        set(v) { scrollX.value = v * 96 / zoomX.value; }
-    });
-
-    const computedScrollY = computed({
-        get() {
-            const viewHeight = canvas.value!.offsetHeight;
-            const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
-            const scrollProgress = scrollY.value / (pageHeight.value - viewHeight);
-            return (viewHeight - handleHeight) * scrollProgress;
-        },
-        set(v) {
-            const viewHeight = canvas.value!.offsetHeight;
-            const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
-            v /= viewHeight - handleHeight;
-            v *= pageHeight.value - viewHeight;
-            scrollY.value = Math.max(Math.min(v, pageHeight.value - viewHeight), 0);
-        }
-    });
-
-    useTrackableXY(scrollHandleX.value!, computedScrollX, undefined, {
-        minX: 0,
-        scale: 1,
-        shiftScale: 0.1,
-        ctrlScale: 2
-    });
-    useTrackableXY(scrollHandleY.value!, undefined, computedScrollY, {
-        scale: 1,
-        shiftScale: 0.1,
-        ctrlScale: 2
-    });
-
-    const centerZoomX = computed({
-        get() { return zoomX.value; },
-        set(v) {
-            const viewWidth = canvas.value?.offsetWidth ?? 100;
-            const delta = zoomX.value - v;
-            scrollX.value += (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96;
-            zoomX.value = zoomX.value - delta;
-            scrollX.value = Math.max(scrollX.value - (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96, 0);
-        }
-    });
-    const centerZoomY = computed({
-        get() { return zoomY.value; },
-        set(v) {
-            const delta = zoomY.value - v;
-            const viewHeight = canvas.value?.offsetHeight ?? 100;
-            scrollY.value += viewHeight / 2;
-            const lastZoom = zoomY.value;
-            zoomY.value = zoomY.value - delta, 10;
-            const zoomRatio = lastZoom / zoomY.value;
-            scrollY.value = Math.min(Math.max(scrollY.value / zoomRatio - viewHeight / 2, 0), pageHeight.value - viewHeight);
-        }
-    });
-
-    useTrackableXY(zoomHandle.value!, centerZoomX, centerZoomY, {
-        minX: 10,
-        minY: 10,
-        maxY: 50,
-        scale: 0.1,
-        shiftScale: 0.01,
-        ctrlScale: 1
-    });
 });
 
 watch(scrollX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
@@ -309,6 +243,56 @@ watch(zoomX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.P
 watch(zoomY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(pianoWidth, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(visible, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+
+// Tracking
+const computedScrollY = computed({
+    get() {
+        const viewHeight = canvas.value!.offsetHeight;
+        const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
+        const scrollProgress = scrollY.value / (pageHeight.value - viewHeight);
+        return (viewHeight - handleHeight) * scrollProgress;
+    },
+    set(v) {
+        const viewHeight = canvas.value!.offsetHeight;
+        const handleHeight = scrollHandleY.value?.offsetHeight ?? 1;
+        v /= viewHeight - handleHeight;
+        v *= pageHeight.value - viewHeight;
+        scrollY.value = Math.max(Math.min(v, pageHeight.value - viewHeight), 0);
+    }
+});
+
+const centerZoomX = computed({
+    get() { return zoomX.value; },
+    set(v) {
+        const viewWidth = canvas.value?.offsetWidth ?? 100;
+        const delta = zoomX.value - v;
+        scrollX.value += (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96;
+        zoomX.value = zoomX.value - delta;
+        scrollX.value = Math.max(scrollX.value - (viewWidth / 2 - pianoWidth.value) / zoomX.value * 96, 0);
+    }
+});
+const centerZoomY = computed({
+    get() { return zoomY.value; },
+    set(v) {
+        const delta = zoomY.value - v;
+        const viewHeight = canvas.value?.offsetHeight ?? 100;
+        scrollY.value += viewHeight / 2;
+        const lastZoom = zoomY.value;
+        zoomY.value = zoomY.value - delta, 10;
+        const zoomRatio = lastZoom / zoomY.value;
+        scrollY.value = Math.min(Math.max(scrollY.value / zoomRatio - viewHeight / 2, 0), pageHeight.value - viewHeight);
+    }
+});
+
+const onScrollHandlePointerDown = useTrackableXYv2(undefined, computedScrollY);
+const onZoomHandlePointerDown = useTrackableXYv2(centerZoomX, centerZoomY, {
+    minX: 10,
+    minY: 10,
+    maxY: 50,
+    scale: 0.1,
+    shiftScale: 0.01,
+    ctrlScale: 1
+});
 
 getWorkspace().rendering.registerCallback([RenderingHelper.Keys.SeekPointer], () => {
     seekUpdateHandle.value++;
@@ -431,7 +415,11 @@ function changeChannel(event: MouseEvent) {
                     </TitlebarButton>
                     <TitlebarButton @click="selectedTool = tool" :highlight="selectedTool.toolName == tool.toolName" v-else>{{ tool.toolName }}</TitlebarButton>
                 </template>
-                <TitlebarButton><span ref="zoomHandle" class="zoom-handle" @pointerdown="lockPointer" @pointerup="unlockPointer">Zoom {{ (zoomX / 0.96).toFixed(0) }}%</span></TitlebarButton>
+                <TitlebarButton><span
+                    class="zoom-handle"
+                    @pointerdown="lockPointer($event); onZoomHandlePointerDown($event);"
+                    @pointerup="unlockPointer"
+                >Zoom {{ (zoomX / 0.96).toFixed(0) }}%</span></TitlebarButton>
                 <TitlebarButton @click="changeChannel">Channel: {{ editingClipRef? editingClipRef.clipChannel : "<Not selected>" }}</TitlebarButton>
             </WindowToolsbar>
         </template>
@@ -453,7 +441,12 @@ function changeChannel(event: MouseEvent) {
                     @pointerup="onCanvasMouseUp"
                     @contextmenu="noContextMenu"
                 ></canvas>
-                <div class="scrollbar y-axis" ref="scrollHandleY" :style="{ top: `${scrollHandleYTop}%` }"></div>
+                <div
+                    class="scrollbar y-axis"
+                    ref="scrollHandleY"
+                    :style="{ top: `${scrollHandleYTop}%` }"
+                    @pointerdown="onScrollHandlePointerDown"
+                ></div>
             </div>
         </div>
         <!--<div class="scrollbar x-axis" ref="scrollHandleX" @pointerdown="lockPointer" @pointerup="unlockPointer"></div>-->
