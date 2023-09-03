@@ -1,0 +1,43 @@
+name: Deploy To GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Mixery
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout current branch
+      uses: actions/checkout@v3
+    - name: Setup Node.JS v19
+      uses: actions/setup-node@v3
+      with:
+        node-version: 19
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+    - name: Install dependencies
+      run: pnpm install
+    - name: Build Mixery
+      run: pnpm -r build
+    - name: Upload pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: modules/ui/dist/
+  deploy:
+    name: Deploy to GitHub pages
+    runs-on: ubuntu-22.04
+    needs: [build]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+    - name: Deploy
+      id: deploy
+      uses: actions/deploy-pages@v2
