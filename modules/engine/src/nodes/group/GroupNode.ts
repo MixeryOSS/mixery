@@ -121,7 +121,8 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
             if (!from || !to) return;
             node.children.connect(from, to, false);
         });
-        
+
+        (node.synthAudioGain.socket as AudioParam).value = (this.synthAudioGain.socket as AudioParam).value;
         return node;
     }
 

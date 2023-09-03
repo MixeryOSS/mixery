@@ -5,7 +5,13 @@ import { IPort } from "../ports/IPort.js";
 import { MidiPort } from "../ports/MidiPort.js";
 import { SignalPort } from "../ports/SignalPort.js";
 
-export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
+interface SineOscillatorData {
+    gain: number;
+    frequency: number;
+    detune: number;
+}
+
+export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscillatorData> {
     static readonly ID = "mixery:sine_oscillator";
     typeId: Identifier = SineOscillatorNode.ID;
     nodeName?: string = "Sine Oscillator";
@@ -22,20 +28,24 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
 
     audioOut: SignalPort;
 
-    internalFrequency: ConstantSourceNode;
-    internalDetune: ConstantSourceNode;
-
     playingNotes: Map<bigint, OscillatorNode> = new Map();
+
+    #freq: ConstantSourceNode;
+    #detune: ConstantSourceNode;
 
     constructor(public readonly nodeId: string, audio: BaseAudioContext) {
         this.triggerIn = new MidiPort(this, "triggerIn");
         this.triggerIn.portName = "Trigger";
 
-        this.freqIn = new SignalPort(this, "freqIn", audio, audio.createGain());
+        this.freqIn = new SignalPort(this, "freqIn", audio, (this.#freq = audio.createConstantSource()).offset);
         this.freqIn.portName = "Frequency";
+        this.#freq.offset.value = 440;
+        this.#freq.start();
 
-        this.detuneIn = new SignalPort(this, "detuneIn", audio, audio.createGain());
+        this.detuneIn = new SignalPort(this, "detuneIn", audio, (this.#detune = audio.createConstantSource()).offset);
         this.detuneIn.portName = "Detune";
+        this.#detune.offset.value = 0;
+        this.#detune.start();
 
         this.audioOut = new SignalPort(this, "audioOut", audio, audio.createGain());
         this.audioOut.portName = "Audio";
@@ -50,12 +60,12 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
             if (note.eventType == "keydown" && !this.playingNotes.has(uid)) {
                 const osc = audio.createOscillator();
                 osc.frequency.value = 0;
-                (this.freqIn.socket as GainNode).connect(osc.frequency);
-                (this.detuneIn.socket as GainNode).connect(osc.detune);
+                this.#freq.connect(osc.frequency);
+                this.#detune.connect(osc.detune);
                 osc.connect(this.audioOut.socket as GainNode);
                 osc.start(audio.currentTime + delay);
                 this.playingNotes.set(uid, osc);
-            } else {
+            } else if (note.eventType == "keyup" && this.playingNotes.has(uid)) {
                 const osc = this.playingNotes.get(uid);
                 osc.stop(audio.currentTime + delay);
                 osc.addEventListener("ended", () => {
@@ -65,18 +75,8 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
         });
 
         this.controls.push(NodeControls.makeParamControl("Gain", (this.audioOut.socket as GainNode).gain));
-
-        this.internalFrequency = audio.createConstantSource();
-        this.controls.push(NodeControls.makeParamControl("Frequency", this.internalFrequency.offset));
-        this.internalFrequency.offset.value = 440;
-        this.internalFrequency.connect(this.freqIn.socket as AudioNode);
-        this.internalFrequency.start();
-
-        this.internalDetune = audio.createConstantSource();
-        this.controls.push(NodeControls.makeParamControl("Detune", this.internalDetune.offset));
-        this.internalDetune.offset.value = 0;
-        this.internalDetune.connect(this.detuneIn.socket as AudioNode);
-        this.internalDetune.start();
+        this.controls.push(NodeControls.makeParamControl("Frequency", this.#freq.offset));
+        this.controls.push(NodeControls.makeParamControl("Detune", this.#detune.offset));
     }
 
     getControls(): NodeControl<any>[] {
@@ -91,15 +91,23 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
         return [this.audioOut];
     }
 
-    saveNode() {
-        return {};
+    saveNode(): SineOscillatorData {
+        return {
+            gain: (this.gainIn.socket as AudioParam).value,
+            frequency: this.#freq.offset.value,
+            detune: this.#detune.offset.value
+        };
     }
 
     createCopy(): SineOscillatorNode {
-        return new SineOscillatorNode(this.nodeId, (this.audioOut.socket as AudioNode).context);
+        const node = new SineOscillatorNode(this.nodeId, (this.audioOut.socket as AudioNode).context);
+        (node.gainIn.socket as AudioParam).value = (this.gainIn.socket as AudioParam).value;
+        node.#freq.offset.value = this.#freq.offset.value;
+        node.#detune.offset.value = this.#detune.offset.value;
+        return node;
     }
 
-    static createFactory(): NodeFactory<SineOscillatorNode, any> {
+    static createFactory(): NodeFactory<SineOscillatorNode, SineOscillatorData> {
         return {
             typeId: SineOscillatorNode.ID,
             label: "Sine Oscillator",
@@ -107,7 +115,11 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
                 return new SineOscillatorNode(nodeId, project.workspace.audio);
             },
             createExisting(project, context, nodeId, data) {
-                return new SineOscillatorNode(nodeId, project.workspace.audio);
+                const node = new SineOscillatorNode(nodeId, project.workspace.audio);
+                (node.gainIn.socket as AudioParam).value = data.gain;
+                node.#freq.offset.value = data.frequency;
+                node.#detune.offset.value = data.detune;
+                return node;
             }
         };
     };

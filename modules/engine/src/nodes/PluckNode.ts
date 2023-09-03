@@ -84,6 +84,7 @@ export class PluckNode implements INode<PluckNode, any> {
     createCopy(): PluckNode {
         const node = new PluckNode(this.nodeId, (this.audioOut.socket as GainNode).context);
         node.data = structuredClone(this.data);
+        (node.audioGain.socket as AudioParam).value = (this.audioGain.socket as AudioParam).value;
         return node;
     }
 

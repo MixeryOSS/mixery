@@ -2,6 +2,7 @@ import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort } from "../in
 import { INode, NodeControl, NodeControls, NodeFactory } from "./INode.js";
 
 export interface ADSR {
+    gain: number;
     attackDelay: number;
     attackDuration: number;
     decayDuration: number;
@@ -17,6 +18,7 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
     nodeY: number = 0;
     nodeWidth: number = 100;
     data: ADSR = {
+        gain: 1,
         attackDelay: 0,
         attackDuration: 100,
         decayDuration: 200,
@@ -126,12 +128,16 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
     }
 
     saveNode(): ADSR {
-        return structuredClone(this.data);
+        return {
+            ...this.data,
+            gain: (this.gainIn.socket as AudioParam).value
+        };
     }
 
     createCopy(): ADSREnvelopeNode {
         const node = new ADSREnvelopeNode(this.nodeId, (this.valueOut.socket as GainNode).context);
         node.data = structuredClone(this.data);
+        (node.gainIn.socket as AudioParam).value = (this.gainIn.socket as AudioParam).value;
         return node;
     }
 
@@ -149,6 +155,7 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
             createExisting(project, context, nodeId, data) {
                 const node = new ADSREnvelopeNode(nodeId, project.workspace.audio);
                 node.data = structuredClone(data);
+                (node.gainIn.socket as AudioParam).value = data.gain;
                 return node;
             }
         };
