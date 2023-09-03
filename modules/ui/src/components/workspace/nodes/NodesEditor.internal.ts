@@ -61,9 +61,9 @@ export namespace internal {
 
         if (node.typeId == GroupNode.ID) {
             for (let i = 6; i >= 0; i -= 3) {
-                renderer.ctx.translate(-i, -i);
+                renderer.ctx!.translate(-i, -i);
                 drawNodeBackground(renderer, geom, "#7f7f7f", 1);
-                renderer.ctx.translate(i, i);
+                renderer.ctx!.translate(i, i);
             }
         }
 
@@ -72,10 +72,10 @@ export namespace internal {
 
         if (node.typeId == GroupNode.ID) {
             if (node.getInputPorts().length + node.getOutputPorts().length == 0) {
-                renderer.ctx.textAlign = "center";
+                renderer.ctx!.textAlign = "center";
                 renderer.fillText("Double-click to", renderX + renderWidth / 2, renderY + 12 + 17, "12px Nunito Sans", "#ffffff");
                 renderer.fillText("edit this group", renderX + renderWidth / 2, renderY + 12 + 30, "12px Nunito Sans", "#ffffff");
-                renderer.ctx.textAlign = "left";
+                renderer.ctx!.textAlign = "left";
             }
 
             renderer.begin()
@@ -99,14 +99,14 @@ export namespace internal {
 
     export function drawPort(renderer: CanvasRenderer, port: IPort<any>, type: "input" | "output", width: number, x: number, y: number) {
         const portName = port.portName ?? port.portId;
-        const textWidth = renderer.ctx.measureText(portName).width;
+        const textWidth = renderer.ctx!.measureText(portName).width;
         const portColor = getPortColor(port.type);
         const portStroke = "#000000";
         const portLabelStroke = port.type == "mixery:group_placeholder_port"? "#ffffff" : "#00000000";
 
-        renderer.ctx.globalAlpha = 0.35;
+        renderer.ctx!.globalAlpha = 0.35;
         renderer.begin().roundRect(x + 4, y, width - 8, 16, 4).fill(portColor);
-        renderer.ctx.globalAlpha = 1;
+        renderer.ctx!.globalAlpha = 1;
         renderer.stroke(portLabelStroke, 1.2).end();
 
         renderer.fillText(portName, x + (type == "output"? (width - textWidth - 8) : 8), y + 12, "12px Nunito Sans", "#ffffff");
@@ -118,12 +118,12 @@ export namespace internal {
             default: break;
         }
         
-        renderer.ctx.translate(x + tX, y + 4);
+        renderer.ctx!.translate(x + tX, y + 4);
         renderer.begin().roundRect(0, 0, 4, 8, 1)
         .fill(portColor)
         .stroke(portStroke, 1)
         .end();
-        renderer.ctx.translate(-x - tX, -y - 4);
+        renderer.ctx!.translate(-x - tX, -y - 4);
 
         return y + 18;
     }
