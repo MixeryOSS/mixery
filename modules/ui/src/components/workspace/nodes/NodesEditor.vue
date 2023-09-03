@@ -504,6 +504,8 @@ function navigateUp(index: number) {
                 class="node-name"
                 :value="selectedNodeRefForRendering? (selectedNodeRefForRendering.nodeName ?? selectedNodeRefForRendering.typeId) : 'Not selected'"
                 @input="getWorkspace().selectedNode? (getWorkspace().selectedNode!.nodeName = ($event.target as any).value) : 1; getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
+                @keydown="$event.stopPropagation()"
+                @keyup="$event.stopPropagation()"
             >
             <div class="node-control-entry" v-if="selectedNodeRefForRendering?.typeId == GroupNode.ID">
                 <div class="node-control-label">Double-click to open</div>
@@ -516,6 +518,8 @@ function navigateUp(index: number) {
                     class="node-control-input"
                     :value="control.value"
                     @input="control.value = ($event.target as any).value"
+                    @keydown="$event.stopPropagation()"
+                    @keyup="$event.stopPropagation()"
                 >
                 <ControlSlider
                     v-if="typeof control.value == 'number'"

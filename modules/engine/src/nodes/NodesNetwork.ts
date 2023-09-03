@@ -77,7 +77,8 @@ export class NodesNetwork {
                 nodeType: node.typeId,
                 data: node.saveNode(),
                 nodeX: node.nodeX,
-                nodeY: node.nodeY
+                nodeY: node.nodeY,
+                nodeName: node.nodeName,
             };
         });
 
@@ -103,10 +104,11 @@ export class NodesNetwork {
                 context,
                 nodeId,
                 savedNode.data
-            );
-            
+            ) as INodeAny;
+
             node.nodeX = savedNode.nodeX;
             node.nodeY = savedNode.nodeY;
+            if (savedNode.nodeName) node.nodeName = savedNode.nodeName;
             this.nodes.push(node);
         }));
 
