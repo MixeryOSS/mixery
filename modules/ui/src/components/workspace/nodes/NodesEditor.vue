@@ -3,6 +3,7 @@ import MixeryWindow from '../../windows/MixeryWindow.vue';
 import TitlebarButton from '../../windows/TitlebarButton.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import WindowToolsbar from '../../windows/WindowToolsbar.vue';
+import ControlSlider from './ControlSlider.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { useTrackableXY, useParentState, useResizeObserver } from '../../composes';
@@ -510,11 +511,16 @@ function navigateUp(index: number) {
             <div class="node-control-entry" v-for="control in (selectedNodeRefForRendering?.getControls() ?? [])">
                 <div class="node-control-label">{{ control.label }}</div>
                 <input
-                    :type="(typeof control.value == 'string'? 'text' : 'number')"
+                    v-if="typeof control.value == 'string'"
+                    type="text"
                     class="node-control-input"
                     :value="control.value"
-                    @input="control.value = (typeof control.value == 'string'? ($event.target as any).value : +($event.target as any).value)"
+                    @input="control.value = ($event.target as any).value"
                 >
+                <ControlSlider
+                    v-if="typeof control.value == 'number'"
+                    v-model="control.value"
+                />
             </div>
             <div class="button delete"
                 @click="deleteNode(getWorkspace().selectedNode!); getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor);"
