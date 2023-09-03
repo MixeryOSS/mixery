@@ -23,6 +23,8 @@ export * from "./nodes/group/GroupIONode.js";
 export * from "./nodes/group/GroupNode.js";
 export * from "./nodes/group/GroupPlaceholderPort.js";
 
+export * from "./nodes/oscillators/SineOscillatorNode.js";
+
 export * from "./nodes/ports/IPort.js";
 export * from "./nodes/ports/MidiPort.js";
 export * from "./nodes/ports/PortsConnection.js";
