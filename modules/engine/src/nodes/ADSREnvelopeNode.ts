@@ -1,4 +1,5 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort, SignalPort } from "../index.js";
+import { Automation } from "../misc/Automation.js";
 import { INode, NodeControl, NodeControls, NodeFactory } from "./INode.js";
 
 export interface ADSR {
@@ -8,6 +9,13 @@ export interface ADSR {
     decayDuration: number;
     sustainLevel: number;
     releaseDuration: number;
+}
+
+interface ADSRNote {
+    source: ConstantSourceNode;
+    automation: Automation;
+    releaseDuration: number;
+    startAtSec: number;
 }
 
 export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
@@ -32,7 +40,7 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
     midiOut: MidiPort;
     valueOut: SignalPort;
 
-    playingNotes: Map<bigint, ConstantSourceNode> = new Map();
+    playingNotes: Map<bigint, ADSRNote> = new Map();
 
     constructor(public readonly nodeId: string, audio: BaseAudioContext) {
         const self = this;
@@ -92,17 +100,27 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
                 val.offset.linearRampToValueAtTime(this.data.sustainLevel, now + atkDelay + atkDuration + decDuration);
                 val.connect(this.valueOut.socket as GainNode);
                 val.start(delay);
-                this.playingNotes.set(uid, val);
+
+                this.playingNotes.set(uid, {
+                    automation: new Automation(0).fromADSRAttackPhase(this.data),
+                    releaseDuration: this.data.releaseDuration,
+                    source: val,
+                    startAtSec: now
+                });
+
                 this.midiOut.emitNote(note);
             } else if (note.eventType == "keyup" && this.playingNotes.has(uid)) {
-                const val = this.playingNotes.get(uid);
+                const { source, automation, releaseDuration, startAtSec } = this.playingNotes.get(uid);
                 const now = audio.currentTime;
                 const relDuration = this.data.releaseDuration / 1000;
 
-                val.offset.cancelAndHoldAtTime(now + delay);
-                val.offset.linearRampToValueAtTime(0, now + delay + relDuration);
-                val.addEventListener("ended", () => this.playingNotes.delete(uid));
-                val.stop(now + delay + relDuration + 1);
+                const valueNow = automation.get((now - startAtSec) * 1000);
+                source.offset.cancelScheduledValues(now + delay);
+                source.offset.setValueAtTime(valueNow, now + delay);
+                source.offset.linearRampToValueAtTime(0, now + delay + relDuration);
+
+                source.addEventListener("ended", () => this.playingNotes.delete(uid));
+                source.stop(now + delay + relDuration + 1);
                 this.midiOut.emitNote({
                     uid,
                     signalType: "delayed",
