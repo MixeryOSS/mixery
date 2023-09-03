@@ -5,7 +5,7 @@ import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import FancyScrollbar from '../universal/FancyScrollbar.vue';
 import { Units, type ClippedNote, NotesSourceNode } from '@mixery/engine';
-import { computed, onMounted, ref, watch, toRaw, type WritableComputedRef } from 'vue';
+import { computed, onMounted, ref, watch, toRaw, type WritableComputedRef, onUnmounted } from 'vue';
 import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
 import { MidiText } from '../../MidiText';
 import { useParentState, useResizeObserver, useTrackableXYv2 } from '../../composes';
@@ -122,10 +122,16 @@ const toolContext: ToolContext = {
     get snapSegmentSize() { return snap.value; }
 };
 
+let lastResizerObserver: ResizeObserver | undefined;
+
 onMounted(() => {
     const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    useResizeObserver(canvas.value!, render);
+    watch(canvas, elem => {
+        if (!elem) return;
+        if (lastResizerObserver) lastResizerObserver.disconnect();
+        lastResizerObserver = useResizeObserver(elem, render);
+    });
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.SeekPointer,
@@ -236,6 +242,12 @@ onMounted(() => {
         });
     }
 });
+onUnmounted(() => {
+    if (lastResizerObserver) {
+        lastResizerObserver.disconnect();
+        lastResizerObserver = undefined;
+    }
+})
 
 watch(scrollX, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
 watch(scrollY, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));

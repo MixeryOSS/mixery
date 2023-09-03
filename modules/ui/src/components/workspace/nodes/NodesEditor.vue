@@ -4,7 +4,7 @@ import TitlebarButton from '../../windows/TitlebarButton.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import ControlSlider from './ControlSlider.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { useTrackableXY, useParentState, useResizeObserver } from '../../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
@@ -92,10 +92,16 @@ let targettingPort: IPort<any> | undefined;
 let targettingWire: PortsConnection | undefined;
 let isMoving = false;
 
+let lastResizerObserver: ResizeObserver | undefined;
+
 onMounted(() => {
     const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    useResizeObserver(canvas.value!, render);
+    watch(canvas, elem => {
+        if (!elem) return;
+        if (lastResizerObserver) lastResizerObserver.disconnect();
+        lastResizerObserver = useResizeObserver(elem, render);
+    });
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.NodesEditor
@@ -166,6 +172,12 @@ onMounted(() => {
         minX: 0.1,
         maxX: 10
     });
+});
+onUnmounted(() => {
+    if (lastResizerObserver) {
+        lastResizerObserver.disconnect();
+        lastResizerObserver = undefined;
+    }
 });
 
 watch(x, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
