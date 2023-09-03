@@ -1,4 +1,4 @@
-import { PluckNode, Units, Workspace } from "../index.js";
+import { PluckNode, UniqueID, Units, Workspace } from "../index.js";
 
 export class Metronome {
     node: PluckNode | undefined;
@@ -32,6 +32,7 @@ export class Metronome {
 
             const delay = playAt - currentMs;
             this.node.midiIn.emitNote({
+                uid: UniqueID.generate(),
                 signalType: "delayed",
                 eventType: "keydown",
                 delayMs: delay,

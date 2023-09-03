@@ -1,4 +1,4 @@
-import { GlobalRegistries, IPort, Identifier, MidiPort } from "../index.js";
+import { GlobalRegistries, IPort, Identifier, MidiPort, UniqueID } from "../index.js";
 import { INode, NodeControl, NodeFactory } from "./INode.js";
 
 export class DebugNode implements INode<DebugNode, any> {
@@ -12,6 +12,7 @@ export class DebugNode implements INode<DebugNode, any> {
     midiIn: MidiPort;
     midiOut: MidiPort;
     midiTrigger: NodeControl<string>;
+    nodeBoundUid: bigint = UniqueID.generate();
 
     constructor(public readonly nodeId: string) {
         const self = this;
@@ -22,10 +23,11 @@ export class DebugNode implements INode<DebugNode, any> {
         this.midiOut.portName = "MIDI Out";
         
         this.midiTrigger = {
-            label: "Type to trigger",
-            get value() { return ""; },
+            label: "Type to trigger keydown",
+            get value() { return "Keydown"; },
             set value(v) {
                 self.midiOut.emitNote({
+                    uid: self.nodeBoundUid,
                     signalType: "instant",
                     eventType: "keydown",
                     midiIndex: 69,

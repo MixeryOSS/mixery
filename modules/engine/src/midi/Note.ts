@@ -25,6 +25,12 @@ export interface NoteWithEvent<TSignal extends string> extends NoteBase<TSignal>
      * to new value.
      */
     eventType: "keydown" | "keyup";
+
+    /**
+     * Note unique ID. This ID is used for identifying which note from which device is pressed or
+     * released.
+     */
+    uid: bigint;
 }
 
 export interface InstantNote extends NoteWithEvent<"instant"> {}

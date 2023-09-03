@@ -1,4 +1,5 @@
 import { AudioSourceNode, IPort, Identifier, MidiPort, Note, NotesSourceNode, PortsConnection, Project } from "../index.js";
+import { UniqueID } from "../misc/UniqueID.js";
 import { INode, INodeAny } from "./INode.js";
 
 export class NodesNetwork {
@@ -9,12 +10,10 @@ export class NodesNetwork {
     viewX: number = 0;
     viewY: number = 0;
 
-    #idGenCounter = 0;
-
     constructor(public readonly audioOut: AudioNode) {}
 
     generateNodeId() {
-        return `snowflake-${Date.now()}-${this.#idGenCounter++}`;
+        return `uid-${UniqueID.generate()}`;
     }
 
     connect(from: IPort<any>, to: IPort<any>, isLoading: boolean = false) {

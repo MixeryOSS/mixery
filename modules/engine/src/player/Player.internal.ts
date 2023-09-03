@@ -1,4 +1,4 @@
-import { AudioClip, ClippedNote, NotesClip, Playable, Player, Units } from "../index.js";
+import { AudioClip, ClippedNote, NotesClip, Playable, Player, UniqueID, Units } from "../index.js";
 
 // Internal code for Player.ts
 export namespace internal {
@@ -13,6 +13,7 @@ export namespace internal {
             const noteStartPointer = clipStartPointer + Units.unitsToMs(bpm, note.startAtUnit);
             const noteDuration = Units.unitsToMs(bpm, note.durationUnit);
             let keydownOffset: number, keyupOffset: number;
+            const uid = UniqueID.generate();
 
             return <Playable<ClippedNote>> {
                 ref: note,
@@ -25,6 +26,7 @@ export namespace internal {
 
                     // offsetAheadMs: how many ms should we delay before the clip is played
                     player.project.nodes.sendNoteSignal(clip.clipChannel, {
+                        uid,
                         signalType: "delayed",
                         delayMs: Math.max(offsetAheadMs, 0),
                         eventType: "keydown",
@@ -39,6 +41,7 @@ export namespace internal {
                     if (keyupOffset != undefined && triggerAt >= keyupOffset) return;
                     
                     player.project.nodes.sendNoteSignal(clip.clipChannel, {
+                        uid,
                         signalType: "delayed",
                         delayMs: Math.max(offsetAheadMs, 0),
                         eventType: "keyup",

@@ -6,6 +6,11 @@ interface GroupNodeSavedData {
     children: SavedNodesNetwork;
 }
 
+interface SynthPlayingNote {
+    callbackThing: ConstantSourceNode;
+    group: GroupNode;
+}
+
 /**
  * Group node is a special node that groups a bunch of nodes.
  * 
@@ -37,7 +42,7 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         return true;
     }
 
-    synthPlayingNotes: Map<number, GroupNode> = new Map();
+    synthPlayingNotes: Map<bigint, SynthPlayingNote> = new Map();
 
     constructor(public readonly nodeId: string, audioContext: BaseAudioContext) {
         this.children = new NodesNetwork(audioContext.createGain());
@@ -57,16 +62,27 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         this.synthAudioGain.portName = "Gain (Synth)";
 
         this.synthMidiIn.onNoteEvent.listen(note => {
-            const { midiIndex } = note;
-            if (this.synthPlayingNotes.has(midiIndex)) {
+            const { uid } = note;
+            const delay = note.signalType == "instant"? 0 : note.delayMs / 1000;
+
+            if (this.synthPlayingNotes.has(uid)) {
                 if (note.eventType != "keyup") return;
-                this.synthPlayingNotes.get(midiIndex).children.sendNoteSignal("Default Channel", note);
-                this.synthPlayingNotes.delete(midiIndex);
+                const synthNote = this.synthPlayingNotes.get(uid);
+                synthNote.group.children.sendNoteSignal("Default Channel", note);
+                synthNote.callbackThing.addEventListener("ended", () => {
+                    synthNote.group.children.audioOut.disconnect(this.children.audioOut);
+                });
+                synthNote.callbackThing.stop(delay);
+                this.synthPlayingNotes.delete(uid);
             } else if (note.eventType == "keydown") {
-                const noteGroup = this.createCopy();
-                noteGroup.children.audioOut.connect(this.children.audioOut as AudioNode);
-                noteGroup.children.sendNoteSignal("Default Channel", note);
-                this.synthPlayingNotes.set(midiIndex, noteGroup);
+                const synthNote: SynthPlayingNote = {
+                    callbackThing: this.children.audioOut.context.createConstantSource(),
+                    group: this.createCopy()
+                };
+                synthNote.group.children.audioOut.connect(this.children.audioOut);
+                synthNote.group.children.sendNoteSignal("Default Channel", note);
+                synthNote.callbackThing.start(this.children.audioOut.context.currentTime + delay);
+                this.synthPlayingNotes.set(uid, synthNote);
             }
         });
     }
