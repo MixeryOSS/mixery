@@ -53,6 +53,11 @@ export interface INode<T extends INode<T, TData>, TData> {
      * will be used for synths, and each note must be played in real time.
      */
     createCopy(): T;
+
+    /**
+     * Calculate release time. Used for synths to know when to disconnect cloned nodes from network.
+     */
+    calculateReleaseTime?(): number;
 }
 
 export type INodeAny = INode<any, any>;

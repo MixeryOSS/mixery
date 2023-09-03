@@ -58,7 +58,9 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, any> {
             } else {
                 const osc = this.playingNotes.get(uid);
                 osc.stop(audio.currentTime + delay);
-                this.playingNotes.delete(uid);
+                osc.addEventListener("ended", () => {
+                    this.playingNotes.delete(uid);
+                });
             }
         });
 
