@@ -75,8 +75,8 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
         });
 
         this.controls.push(NodeControls.makeParamControl("Gain", (this.audioOut.socket as GainNode).gain));
-        this.controls.push(NodeControls.makeParamControl("Frequency", this.#freq.offset));
-        this.controls.push(NodeControls.makeParamControl("Detune", this.#detune.offset));
+        this.controls.push(NodeControls.makeParamControl("Frequency (Hz)", this.#freq.offset, 0));
+        this.controls.push(NodeControls.makeParamControl("Detune (cents)", this.#detune.offset));
     }
 
     getControls(): NodeControl<any>[] {

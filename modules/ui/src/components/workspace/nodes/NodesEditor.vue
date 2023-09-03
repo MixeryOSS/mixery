@@ -524,6 +524,8 @@ function navigateUp(index: number) {
                 <ControlSlider
                     v-if="typeof control.value == 'number'"
                     v-model="control.value"
+                    :min="control.minValue"
+                    :max="control.maxValue"
                 />
             </div>
             <div class="button delete"

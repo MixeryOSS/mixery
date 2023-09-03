@@ -89,14 +89,18 @@ export interface NodeFactory<T extends INode<T, TData>, TData> {
 export interface NodeControl<T extends (string | number)> {
     label: string;
     value: T;
+    minValue?: number;
+    maxValue?: number;
 }
 
 export namespace NodeControls {
-    export function makeParamControl(label: string, param: AudioParam): NodeControl<number> {
+    export function makeParamControl(label: string, param: AudioParam, min?: number, max?: number): NodeControl<number> {
         return {
             label,
             get value() { return param.value; },
-            set value(v) { param.value = v; }
+            set value(v) { param.value = v; },
+            minValue: min ?? param.minValue,
+            maxValue: max ?? param.maxValue
         };
     }
 }

@@ -4,7 +4,9 @@ import { DoubleClickHandler } from '@/handling/DoubleClickHandler';
 import { ref } from 'vue';
 
 const props = defineProps<{
-    modelValue: number
+    modelValue: number,
+    min?: number,
+    max?: number
 }>();
 const emits = defineEmits(["update:modelValue"]);
 
@@ -14,7 +16,9 @@ const textMode = ref(false);
 const trackPosition = useTrackableXYv2(value, undefined, {
     scale: 0.1,
     shiftScale: 0.01,
-    ctrlScale: 1
+    ctrlScale: 1,
+    minX: props.min,
+    maxX: props.max
 });
 
 const doubleclick = new DoubleClickHandler(() => 500, () => {
@@ -26,9 +30,15 @@ function onPointerDown(event: PointerEvent) {
     doubleclick.mouseDown(event);
 }
 
+function clamp(v: number) {
+    if (props.min != undefined) v = Math.max(props.min, v);
+    if (props.max != undefined) v = Math.min(props.max, v);
+    return v;
+}
+
 function onInput(event: Event) {
     const content = (event.target as HTMLDivElement).textContent;
-    if (content != null && content.trim().length > 0) value.value = +content;
+    if (content != null && content.trim().length > 0) value.value = clamp(+content);
 }
 
 function formatDecimal(d: number) {
