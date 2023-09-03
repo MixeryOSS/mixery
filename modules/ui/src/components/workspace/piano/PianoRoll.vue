@@ -4,7 +4,7 @@ import TitlebarButton from '../../windows/TitlebarButton.vue';
 import WindowToolsbar from '../../windows/WindowToolsbar.vue';
 import MixeryIcon from '../../icons/MixeryIcon.vue';
 import FancyScrollbar from '../universal/FancyScrollbar.vue';
-import { Units, type ClippedNote, type NotesClip } from '@mixery/engine';
+import { Units, type ClippedNote, type NotesClip, NotesSourceNode } from '@mixery/engine';
 import { computed, onMounted, ref, watch, type ShallowRef, render, toRaw } from 'vue';
 import { CanvasRenderer } from '../../../canvas/CanvasRenderer';
 import { MidiText } from '../../MidiText';
@@ -15,14 +15,26 @@ import { Snapper } from '@/handling/Snapper';
 import { MixeryUI } from '@/handling/MixeryUI';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
 import { internal } from './PianoRoll.internal';
+import type { ContextMenuEntry } from '@/components/contextmenus/ContextMenuEntry';
+import { traverse } from '@/utils';
 
 const props = defineProps<{
     visible: boolean,
     workspaceId: string,
     seekPointer: number,
-    reactiveBpm: number
+    reactiveBpm: number,
+    contextMenu?: ContextMenuEntry[],
+    contextMenuX: number,
+    contextMenuY: number,
 }>();
-const emits = defineEmits(["update:visible", "update:seekPointer", "updateKeybinds"]);
+const emits = defineEmits([
+    "update:visible",
+    "update:seekPointer",
+    "updateKeybinds",
+    "update:contextMenu",
+    "update:contextMenuX",
+    "update:contextMenuY",
+]);
 
 function getWorkspace() { return MixeryUI.workspaces.get(props.workspaceId)!; }
 function getProject() { return getWorkspace().project; }
@@ -34,6 +46,11 @@ const scrollHandleY = ref<HTMLDivElement>();
 const zoomHandle = ref<HTMLSpanElement>();
 const canvasRenderer = ref<CanvasRenderer>();
 
+const contextMenu = useParentState<ContextMenuEntry[]>("contextMenu", props, emits);
+const contextMenuX = useParentState<number>("contextMenuX", props, emits);
+const contextMenuY = useParentState<number>("contextMenuY", props, emits);
+
+const updateHandle = ref(0);
 const visible = useParentState("visible", props, emits);
 const seekUpdateHandle = ref(0);
 const scrollX = ref(0); // TODO track time instead
@@ -60,6 +77,10 @@ const seekPointer = computed({
         const editingClip = getEditingClip();
         emits("update:seekPointer", v + (editingClip? Units.unitsToMs(getProject().bpm, editingClip.startAtUnit) : 0));
     }
+});
+const editingClipRef = computed(() => {
+    updateHandle.value;
+    return getEditingClip();
 });
 
 const snap = ref(96 / 8);
@@ -123,6 +144,9 @@ onMounted(() => {
     const noteHg = ["#ffffff", "#3f3f3f"];
 
     function render() {
+        // Before render to canvas
+        if (toRaw(editingClipRef.value) != getEditingClip()) updateHandle.value++;
+
         if (!props.visible) return;
         if (!canvas.value) return;
         renderer.startRender(canvas.value!);
@@ -367,6 +391,25 @@ function onCanvasMouseUp(event: PointerEvent) {
         RenderingHelper.Keys.PatternsEditor
     );
 }
+
+function changeChannel(event: MouseEvent) {
+    const workspaceUI = traverse(event.target as HTMLElement, v => v.classList.contains("workspace"), v => v.parentElement);
+    const workspaceBox = workspaceUI?.getBoundingClientRect();
+    contextMenuX.value = event.pageX - (workspaceBox?.x ?? 0);
+    contextMenuY.value = event.pageY - (workspaceBox?.y ?? 0);
+
+    const nodes = getWorkspace().project.nodes.nodes.filter(v => v.typeId == NotesSourceNode.ID);
+    contextMenu.value = nodes.length > 0? nodes.map(v => ({
+        label: (v as NotesSourceNode).data.channelName,
+        onClick() {
+            const editingClip = getEditingClip();
+            if (!editingClip) return;
+            editingClip.clipChannel = (v as NotesSourceNode).data.channelName;
+            updateHandle.value++;
+            getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PatternsEditor);
+        },
+    })) : [];
+}
 </script>
 
 <template>
@@ -389,6 +432,7 @@ function onCanvasMouseUp(event: PointerEvent) {
                     <TitlebarButton @click="selectedTool = tool" :highlight="selectedTool.toolName == tool.toolName" v-else>{{ tool.toolName }}</TitlebarButton>
                 </template>
                 <TitlebarButton><span ref="zoomHandle" class="zoom-handle" @pointerdown="lockPointer" @pointerup="unlockPointer">Zoom {{ (zoomX / 0.96).toFixed(0) }}%</span></TitlebarButton>
+                <TitlebarButton @click="changeChannel">Channel: {{ editingClipRef? editingClipRef.clipChannel : "<Not selected>" }}</TitlebarButton>
             </WindowToolsbar>
         </template>
         <div class="inner">

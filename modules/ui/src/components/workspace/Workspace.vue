@@ -308,6 +308,9 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                     :workspace-id="props.workspaceId"
                     :seek-pointer="sharedSeekPointer"
                     :reactive-bpm="reactiveBpm"
+                    v-model:context-menu="contextMenu"
+                    v-model:context-menu-x="contextMenuX"
+                    v-model:context-menu-y="contextMenuY"
                     @update:seek-pointer="sliders$changeTime($event)"
                     @update-keybinds="keybindsUpdateHandle++"
                 />
