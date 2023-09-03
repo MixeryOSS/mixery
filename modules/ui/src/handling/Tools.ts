@@ -1,4 +1,5 @@
 import type { ITool, ToolContext, ToolObject } from "./ITool";
+import { Snapper } from "./Snapper";
 
 export namespace Tools {
     export const LIST: (() => ITool)[] = [
@@ -196,7 +197,8 @@ export namespace Tools {
             }
 
             const length = Math.max(this.replicate.duration, context.snapSegmentSize);
-            const start = Math.floor((position - this.lastPosition) / length) * length + this.lastPosition;
+            let start = Math.floor((position - this.lastPosition) / length) * length + this.lastPosition;
+            start = Snapper.snap(start, context.snapSegmentSize);
             if (start < 0) return;
             const end = start + length;
             if (context.hitTest(start, trackPosition) || context.hitTest(end - 0.1, trackPosition)) return;
