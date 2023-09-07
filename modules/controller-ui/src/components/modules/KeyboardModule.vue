@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import ModuleBox from './ModuleBox.vue';
 import { useParentRef } from '@/use';
 import { Controller } from '@/Controller';
@@ -33,7 +33,8 @@ const pianoKeys = ref(new Array<{ key: string, sharp: boolean }[]>(10)
         ...structuredClone(u),
         octave,
         isActive: false,
-        midiIndex: octave * 12 + idx + 12
+        midiIndex: octave * 12 + idx + 12,
+        color: "",
     }))));
 
 const mapping = new Map<number, (typeof pianoKeys.value)[number]>();
@@ -75,6 +76,13 @@ function pointerMove(event: PointerEvent, key: (typeof pianoKeys.value)[number])
     if (prev != key && navigator.vibrate) navigator.vibrate(3);
     noteDown(event, key);
 }
+
+Controller.onNoteColor.useProxy().listen(event => {
+    const { channel, midiIndex, color } = event;
+    if (props.channel != channel) return
+    if ((midiIndex - 12) >= pianoKeys.value.length || (midiIndex - 12) < 0) return;
+    pianoKeys.value[(midiIndex - 12)].color = color;
+});
 </script>
 
 <template>
@@ -92,7 +100,7 @@ function pointerMove(event: PointerEvent, key: (typeof pianoKeys.value)[number])
                     v-for="key in pianoKeys"
                     class="key"
                     :class="{ sharp: key.sharp, keydown: key.isActive }"
-                    :style="{ '--key-width': `50px` }"
+                    :style="{ '--key-width': `50px`, '--color-key': key.color }"
                     @pointerdown="pointerDown($event, key)"
                     @pointermove="pointerMove($event, key)"
                 >
@@ -124,25 +132,25 @@ function pointerMove(event: PointerEvent, key: (typeof pianoKeys.value)[number])
         touch-action: none;
 
         .key {
+            --color-key: #eeeeee;
             width: var(--key-width);
             min-width: var(--key-width);
-            background-color: #eeeeee;
+            background-color: var(--color-key);
             color: #000000;
             font-size: 12px;
             user-select: none;
             touch-action: none;
             height: calc(100% - 8px);
             border-radius: 0 0 4px 4px;
-            box-shadow: 0 8px #424242, inset 0 0 0 2px #ffffff;
+            box-shadow: 0 8px #424242, inset 0 0 0 2px #ffffff7f;
             margin-right: 2px;
             transition:
-                0.1s linear background-color,
                 0.1s linear margin-top,
                 0.1s linear box-shadow,
                 0.1s linear height;
 
             &.sharp {
-                background-color: #141414;
+                --color-key: #141414;
                 color: #ffffff;
                 margin-left: calc(0px - var(--key-width) * 0.5);
                 margin-right: calc(0px - var(--key-width) * 0.5);
@@ -150,16 +158,15 @@ function pointerMove(event: PointerEvent, key: (typeof pianoKeys.value)[number])
                 border-radius: 4px;
                 z-index: 1;
                 height: 60%;
-                box-shadow: 0 8px #070707, inset 0 0 0 2px #080808;
+                box-shadow: 0 8px #0707077f, 0 8px var(--color-key), inset 0 0 0 2px #0808089f;
             }
 
             &.keydown {
                 background-color: #ff8e43;
-                box-shadow: 0 4px #a0501c, inset 0 0 0 2px #ffbb7b;
+                box-shadow: 0 4px #a0501c, 0 4px #a0501c, inset 0 0 0 2px #ffbb7b;
                 height: calc(100% - 4px);
                 
                 transition:
-                    0s linear background-color,
                     0s linear margin-top,
                     0s linear box-shadow,
                     0s linear height;

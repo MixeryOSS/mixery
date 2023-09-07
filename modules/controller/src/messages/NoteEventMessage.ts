@@ -1,6 +1,7 @@
 import { BaseWritableStream } from "@mixery/blobson";
 import { Message, MessageFactory } from "./Message.js";
 import { Identifier } from "../types.js";
+import { Messages } from "./Messages.js";
 
 export enum NoteEventType {
     KEYDOWN = 0x00,

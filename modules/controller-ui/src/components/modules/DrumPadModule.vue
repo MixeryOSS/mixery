@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useParentRef } from '@/use';
 import ModuleBox from './ModuleBox.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { Controller } from '@/Controller';
 import { NoteEventMessage, NoteEventType } from '@mixery/controller';
 
@@ -32,7 +32,8 @@ const pads = ref(
         x: idx % props.matrix[0],
         y: Math.floor(idx / props.matrix[1]),
         midiIndex: idx,
-        isPressed: false
+        isPressed: false,
+        color: "#dadada"
     }))
 );
 
@@ -77,6 +78,13 @@ function onPointerMove(event: PointerEvent, x: number, y: number) {
     if (prev != pad && navigator.vibrate) navigator.vibrate(3);
     noteDown(event, pad);
 }
+
+Controller.onNoteColor.useProxy().listen(event => {
+    const { channel, midiIndex, color } = event;
+    if (props.channel != channel) return
+    if (midiIndex < 0 || midiIndex >= pads.value.length) return;
+    pads.value[midiIndex].color = color;
+});
 </script>
 
 <template>
@@ -94,6 +102,7 @@ function onPointerMove(event: PointerEvent, x: number, y: number) {
                     v-for="colIndex in props.matrix[0]"
                     class="pad"
                     :class="{ pressed: pads[colIndex - 1 + (rowIndex - 1) * props.matrix[0]].isPressed }"
+                    :style="{ '--color-pad': pads[colIndex - 1 + (rowIndex - 1) * props.matrix[0]].color }"
                     @pointerdown="onPointerDown($event, colIndex - 1, rowIndex - 1)"
                     @pointerup="onPointerUp"
                     @pointermove="onPointerMove($event, colIndex - 1, rowIndex - 1)"
@@ -120,6 +129,7 @@ function onPointerMove(event: PointerEvent, x: number, y: number) {
             flex: 1 1 auto;
             user-select: none;
             touch-action: none;
+            --color-pad: #dadada;
 
             &::before {
                 content: '';
@@ -128,15 +138,15 @@ function onPointerMove(event: PointerEvent, x: number, y: number) {
                 left: 1px;
                 width: calc(100% - 2px);
                 height: calc(100% - 6px);
-                background-color: #ff7f7f;
+                background-color: var(--color-pad);
                 border-radius: 4px;
-                box-shadow: 0 4px #0000003f, 0 4px #ff7f7f, inset 0 0 0 2px #ffffff4f;
+                box-shadow: 0 4px #0000003f, 0 4px var(--color-pad), inset 0 0 0 2px #ffffff4f;
                 transition: 0.1s linear top, 0.1s linear height, 0.1s linear box-shadow;
             }
 
             &.pressed::before {
                 top: 4px;
-                box-shadow: 0 1px #0000003f, 0 1px #ff7f7f, inset 0 0 0 4px #ffffff7f, inset 0 0 0 2px #ffffff;
+                box-shadow: 0 1px #0000003f, 0 1px var(--color-pad), inset 0 0 0 4px #ffffff7f, inset 0 0 0 2px #ffffff;
                 transition: none;
             }
         }

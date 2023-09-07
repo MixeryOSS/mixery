@@ -2,6 +2,7 @@ import { ReadableWebStream, WritableBlobStream } from "@mixery/blobson";
 import { Identifier } from "../types.js";
 import { Message, MessageFactory } from "./Message.js";
 import { NoteEventMessage } from "./NoteEventMessage.js";
+import { NoteColorMessage } from "./NoteColorMessage.js";
 
 export namespace Messages {
     const wellKnownStringToByte = new Map<Identifier, number>();
@@ -18,7 +19,8 @@ export namespace Messages {
     }
 
     // Well known messages
-    addWellKnownMessageId(NoteEventMessage.ID, 0x00);
+    addWellKnownMessageId(NoteEventMessage.ID, 0x00); addFactory(NoteEventMessage.createFactory());
+    addWellKnownMessageId(NoteColorMessage.ID, 0x01); addFactory(NoteColorMessage.createFactory());
 
     export function pack(message: Message): Blob {
         const stream = new WritableBlobStream();

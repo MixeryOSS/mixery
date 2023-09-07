@@ -5,7 +5,7 @@ import ModulesContainer from './components/modules/ModulesContainer.vue';
 import KeyboardModule from './components/modules/KeyboardModule.vue';
 import { ref } from 'vue';
 import type { Modules } from './components/Modules';
-import { LocalControllerConnection } from '@mixery/controller';
+import { LocalControllerConnection, NoteColorMessage, NoteEventMessage } from '@mixery/controller';
 import { Controller } from './Controller';
 import DrumPadModule from './components/modules/DrumPadModule.vue';
 import { ModulesCollision } from './ModulesCollision';
@@ -23,19 +23,48 @@ modules.value.push({
     matrix: [4, 4]
 });
 
-const connectState = ref<"disconnected" | "connecting" | "connected">("disconnected");
+const connectState = ref<"disconnected" | "connecting" | "connected">(!Controller.connection
+    ? "disconnected" : Controller.connection.isConnected? "connected"
+    : "connecting"
+);
 
+if (Controller.connection && !Controller.connection.isConnected) {
+    Controller.connection.whenConnected.then(() => connectState.value = "connected");
+}
+
+// We'll move this to somewhere else
 async function connect() {
-    const { client, host } = LocalControllerConnection.createPair(3000);
+    const { client, host } = LocalControllerConnection.createPair(500);
     Controller.connection = client;
     connectState.value = "connecting";
 
     try {
         await client.whenConnected;
         connectState.value = "connected";
-        host.listenForMessages(console.log);
+
+        // Virtual host handling section
+        host.listenForMessages(message => {
+            console.log(message);
+
+            if (message instanceof NoteEventMessage) {
+                host.send(new NoteColorMessage(message.channel, message.midiIndex, 255, 127, 127));
+            }
+        });
+
+        // Client handling section
+        client.listenForMessages(message => {
+            if (message instanceof NoteColorMessage) {
+                Controller.onNoteColor.emit({
+                    channel: message.channel,
+                    midiIndex: message.midiIndex,
+                    color: `rgb(${message.red}, ${message.green}, ${message.blue})`
+                });
+            }
+        });
     } catch (e) {
+        console.error(e);
         connectState.value = "disconnected";
+        Controller.connection = undefined;
     }
 }
 
