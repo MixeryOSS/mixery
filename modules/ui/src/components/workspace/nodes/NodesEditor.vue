@@ -8,7 +8,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { CanvasRenderer } from '@/canvas/CanvasRenderer';
 import { useTrackableXY, useParentState, useResizeObserver } from '../../composes';
 import { MixeryUI } from '@/handling/MixeryUI';
-import { type IPort, type INode, type PortsConnection, GroupNode, GroupPlaceholderPort } from '@mixery/engine';
+import { type IPort, type INode, type PortsConnection, GroupNode, GroupPlaceholderPort, GlobalRegistries } from '@mixery/engine';
 import type { ContextMenuEntry } from '../../contextmenus/ContextMenuEntry';
 import { traverse } from '@/utils';
 import { RenderingHelper } from '@/canvas/RenderingHelper';
@@ -93,15 +93,15 @@ let targettingWire: PortsConnection | undefined;
 let isMoving = false;
 
 let lastResizerObserver: ResizeObserver | undefined;
+watch(canvas, elem => {
+    if (!elem) return;
+    if (lastResizerObserver) lastResizerObserver.disconnect();
+    lastResizerObserver = useResizeObserver(elem, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.NodesEditor));
+});
 
 onMounted(() => {
     const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    watch(canvas, elem => {
-        if (!elem) return;
-        if (lastResizerObserver) lastResizerObserver.disconnect();
-        lastResizerObserver = useResizeObserver(elem, render);
-    });
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.NodesEditor

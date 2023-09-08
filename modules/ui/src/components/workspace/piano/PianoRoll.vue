@@ -123,15 +123,15 @@ const toolContext: ToolContext = {
 };
 
 let lastResizerObserver: ResizeObserver | undefined;
+watch(canvas, elem => {
+    if (!elem) return;
+    if (lastResizerObserver) lastResizerObserver.disconnect();
+    lastResizerObserver = useResizeObserver(elem, () => getWorkspace().rendering.redrawRequest(RenderingHelper.Keys.PianoRoll));
+});
 
 onMounted(() => {
     const renderer = new CanvasRenderer(render);
     canvasRenderer.value = renderer;
-    watch(canvas, elem => {
-        if (!elem) return;
-        if (lastResizerObserver) lastResizerObserver.disconnect();
-        lastResizerObserver = useResizeObserver(elem, render);
-    });
     getWorkspace().rendering.registerCallback([
         RenderingHelper.Keys.All,
         RenderingHelper.Keys.SeekPointer,
