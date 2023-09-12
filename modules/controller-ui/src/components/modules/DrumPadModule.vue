@@ -45,7 +45,7 @@ function noteUp(event: PointerEvent) {
     if (prev) {
         prev.isPressed = false;
         mapping.delete(event.pointerId);
-        Controller.connection?.send(new NoteEventMessage(NoteEventType.KEYUP, props.channel ?? 0, prev.midiIndex, event.pressure));
+        Controller.client.send(new NoteEventMessage(NoteEventType.KEYUP, props.channel ?? 0, prev.midiIndex, event.pressure));
     }
 }
 
@@ -56,7 +56,7 @@ function noteDown(event: PointerEvent, pad: (typeof pads.value)[number]) {
 
         pad.isPressed = true;
         mapping.set(event.pointerId, pad);
-        Controller.connection?.send(new NoteEventMessage(NoteEventType.KEYDOWN, props.channel ?? 0, pad.midiIndex, event.pressure));
+        Controller.client.send(new NoteEventMessage(NoteEventType.KEYDOWN, props.channel ?? 0, pad.midiIndex, event.pressure));
     }
 }
 

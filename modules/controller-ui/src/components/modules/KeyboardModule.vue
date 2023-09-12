@@ -45,7 +45,7 @@ function noteUp(event: PointerEvent) {
     if (prev) {
         prev.isActive = false;
         mapping.delete(event.pointerId);
-        Controller.connection?.send(new NoteEventMessage(NoteEventType.KEYUP, props.channel ?? 0, prev.midiIndex, event.pressure));
+        Controller.client.send(new NoteEventMessage(NoteEventType.KEYUP, props.channel ?? 0, prev.midiIndex, event.pressure));
     }
 }
 
@@ -56,7 +56,7 @@ function noteDown(event: PointerEvent, key: (typeof pianoKeys.value)[number]) {
 
         key.isActive = true;
         mapping.set(event.pointerId, key);
-        Controller.connection?.send(new NoteEventMessage(NoteEventType.KEYDOWN, props.channel ?? 0, key.midiIndex, event.pressure));
+        Controller.client.send(new NoteEventMessage(NoteEventType.KEYDOWN, props.channel ?? 0, key.midiIndex, event.pressure));
     }
 }
 
