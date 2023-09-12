@@ -52,7 +52,7 @@ export interface INode<T extends INode<T, TData>, TData> {
      * Create a copy of this node. This method must NOT attempt to halt main thread because this
      * will be used for synths, and each note must be played in real time.
      */
-    createCopy(): T;
+    createCopy(context: NodesNetworkContext): T;
 
     /**
      * Calculate release time. Used for synths to know when to disconnect cloned nodes from network.

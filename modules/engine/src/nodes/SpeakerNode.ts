@@ -1,4 +1,4 @@
-import { GlobalRegistries, IPort, Identifier, SignalPort } from "../index.js";
+import { GlobalRegistries, IPort, Identifier, NodesNetworkContext, SignalPort } from "../index.js";
 import { INode, NodeControl, NodeFactory } from "./INode.js";
 
 export class SpeakerNode implements INode<SpeakerNode, any> {
@@ -37,8 +37,8 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
         return {}; // Return nothing
     }
 
-    createCopy(): SpeakerNode {
-        return new SpeakerNode(this.nodeId, this.speakerPort.socket as AudioNode);
+    createCopy(context: NodesNetworkContext): SpeakerNode {
+        return new SpeakerNode(this.nodeId, context.audioOut);
     }
 
     static createFactory(): NodeFactory<SpeakerNode, any> {

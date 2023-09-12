@@ -1,5 +1,5 @@
 import { GlobalRegistries, IPort, Identifier, MidiPort, NodesNetwork, NotesSourceNode, SavedNodesNetwork, SignalPort, SpeakerNode } from "../../index.js";
-import { INode, INodeAny, NodeControl, NodeFactory } from "../INode.js";
+import { INode, INodeAny, NodeControl, NodeControls, NodeFactory } from "../INode.js";
 import { GroupIONode, GroupInputsNode, GroupOutputsNode } from "./GroupIONode.js";
 
 interface GroupNodeSavedData {
@@ -30,6 +30,7 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
     children: NodesNetwork;
     inputs: GroupInputsNode;
     outputs: GroupOutputsNode;
+    synthControls: NodeControl<any>[] = [];
 
     // Synth mode
     // Automatically applied when both Notes Source Input and Speaker Output nodes present
@@ -55,7 +56,7 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         this.synthMidiIn = new MidiPort(this, "synthMidiIn");
         this.synthMidiIn.portName = "MIDI (Synth)";
 
-        this.synthAudioOut = new SignalPort(this, "synthAudioOut", audioContext, this.children.audioOut);
+        this.synthAudioOut = new SignalPort(this, "synthAudioOut", audioContext, audioContext.createGain());
         this.synthAudioOut.portName = "Audio (Synth)";
 
         this.synthAudioGain = new SignalPort(this, "synthAudioGain", audioContext, (this.synthAudioOut.socket as GainNode).gain);
@@ -64,32 +65,34 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         this.synthMidiIn.onNoteEvent.listen(note => {
             const { uid } = note;
             const delay = note.signalType == "instant"? 0 : note.delayMs / 1000;
+            const destination = this.synthAudioOut.socket as GainNode;
 
-            if (this.synthPlayingNotes.has(uid)) {
-                if (note.eventType != "keyup") return;
-                const synthNote = this.synthPlayingNotes.get(uid);
-                synthNote.group.children.sendNoteSignal("Default Channel", note);
-                synthNote.callbackThing.addEventListener("ended", () => {
-                    synthNote.group.children.audioOut.disconnect(this.children.audioOut);
-                });
-                const releaseTime = Math.max(...synthNote.group.children.nodes.map(v => v.calculateReleaseTime? v.calculateReleaseTime() : 0));
-                synthNote.callbackThing.stop(this.children.audioOut.context.currentTime + delay + releaseTime / 1000);
-                this.synthPlayingNotes.delete(uid);
-            } else if (note.eventType == "keydown") {
+            if (!this.synthPlayingNotes.has(uid) && note.eventType == "keydown") {
                 const synthNote: SynthPlayingNote = {
                     callbackThing: this.children.audioOut.context.createConstantSource(),
                     group: this.createCopy()
                 };
-                synthNote.group.children.audioOut.connect(this.children.audioOut);
+                synthNote.group.children.audioOut.connect(destination);
                 synthNote.group.children.sendNoteSignal("Default Channel", note);
                 synthNote.callbackThing.start(this.children.audioOut.context.currentTime + delay);
                 this.synthPlayingNotes.set(uid, synthNote);
+            } else if (this.synthPlayingNotes.has(uid) && note.eventType == "keyup") {
+                const synthNote = this.synthPlayingNotes.get(uid);
+                synthNote.group.children.sendNoteSignal("Default Channel", note);
+                synthNote.callbackThing.addEventListener("ended", () => {
+                    synthNote.group.children.audioOut.disconnect(destination);
+                });
+                const releaseTime = Math.max(...synthNote.group.children.nodes.map(v => v.calculateReleaseTime? v.calculateReleaseTime() : 0));
+                synthNote.callbackThing.stop(this.children.audioOut.context.currentTime + delay + releaseTime / 1000);
+                this.synthPlayingNotes.delete(uid);
             }
         });
+
+        this.synthControls.push(NodeControls.makeParamControl("Gain", this.synthAudioGain.socket as AudioParam));
     }
 
     getControls(): NodeControl<any>[] {
-        return [];
+        return this.isSynth? this.synthControls : [];
     }
 
     getInputPorts(): IPort<any>[] {
@@ -108,10 +111,11 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
 
     createCopy(): GroupNode {
         const node = new GroupNode(this.nodeId, this.children.audioOut.context);
+        node.nodeName = `${this.nodeName} - Copy`;
 
         this.children.nodes.forEach(childToCopy => {
             if (childToCopy instanceof GroupIONode) return; // TODO replicate io node to clone
-            const copiedChild = childToCopy.createCopy() as INodeAny;
+            const copiedChild = childToCopy.createCopy(node.children) as INodeAny;
             node.children.nodes.push(copiedChild);
         });
 

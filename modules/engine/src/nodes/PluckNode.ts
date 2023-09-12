@@ -54,6 +54,7 @@ export class PluckNode implements INode<PluckNode, any> {
             oscGain.connect(this.audioOut.socket as any);
             osc.start(audioContext.currentTime + timeOffset);
             osc.stop(audioContext.currentTime + timeOffset + this.data.duration);
+            osc.onended = () => oscGain.disconnect();
         });
 
         const self = this;
