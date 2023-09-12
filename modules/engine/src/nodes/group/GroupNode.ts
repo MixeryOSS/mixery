@@ -131,6 +131,7 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
         return {
             typeId: GroupNode.ID,
             label: "Group",
+            category: "Specials",
             createNew(project, context, nodeId) {
                 return new GroupNode(nodeId, project.workspace.audio);
             },

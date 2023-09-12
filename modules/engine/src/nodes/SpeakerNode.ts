@@ -45,6 +45,7 @@ export class SpeakerNode implements INode<SpeakerNode, any> {
         return {
             typeId: SpeakerNode.ID,
             label: "Speaker Output",
+            category: "Inputs/Outputs",
             createNew(project, context, nodeId) {
                 return new SpeakerNode(nodeId, context.audioOut);
             },

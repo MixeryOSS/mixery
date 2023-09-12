@@ -167,6 +167,7 @@ export class ADSREnvelopeNode implements INode<ADSREnvelopeNode, ADSR> {
         return {
             typeId: ADSREnvelopeNode.ID,
             label: "ADSR Envelope",
+            category: "Synthesizing",
             createNew(project, context, nodeId) {
                 return new ADSREnvelopeNode(nodeId, project.workspace.audio);
             },

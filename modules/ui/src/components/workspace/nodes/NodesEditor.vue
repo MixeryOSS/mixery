@@ -191,11 +191,14 @@ function addNode(event: MouseEvent) {
     const workspaceBox = workspaceUI?.getBoundingClientRect();
     contextMenuX.value = event.pageX - (workspaceBox?.x ?? 0);
     contextMenuY.value = event.pageY - (workspaceBox?.y ?? 0);
-    const entries: ContextMenuEntry[] = [];
+    const categories: Map<string, ContextMenuEntry[]> = new Map();
+
     getWorkspace().workspace.registries.nodeFactories.forEach((id, factory) => {
         if (factory.hidden) return;
+        let category = categories.get(factory.category ?? "Uncategorized");
+        if (!category) categories.set(factory.category ?? "Uncategorized", category = []);
 
-        entries.push({
+        category.push({
             label: factory.label,
             async onClick() {
                 const createTask = factory.createNew(
@@ -214,7 +217,11 @@ function addNode(event: MouseEvent) {
             },
         });
     });
-    contextMenu.value = entries;
+
+    contextMenu.value = [...categories.keys()].map(v => ({
+        label: v,
+        submenu: categories.get(v) ?? []
+    }));
 }
 
 function nodeClick(event: PointerEvent, cb: (node: INode<any, any>, port?: IPort<any>, portType?: "input" | "output") => any) {

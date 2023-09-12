@@ -69,6 +69,7 @@ export class AudioSourceNode implements INode<AudioSourceNode, AudioSourceNodeDa
         return {
             typeId: AudioSourceNode.ID,
             label: "Audio Source",
+            category: "Inputs/Outputs",
             createNew(project, context, nodeId) {
                 return new AudioSourceNode(nodeId, project.workspace.audio);
             },

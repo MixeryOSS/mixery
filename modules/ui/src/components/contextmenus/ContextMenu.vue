@@ -51,7 +51,7 @@ onUnmounted(() => {
 <template>
     <div class="context-menu" ref="root" :style="{ left: `${props.x}px`, top: `${props.y}px` }">
         <div class="content">
-            <div class="entry" v-for="entry in props.menu">
+            <div class="entry" v-for="entry in props.menu" :class="{ submenu: !!entry.submenu }">
                 <div class="label" @click="entryClicked($event, entry)">{{ entry.label }}</div>
             </div>
         </div>
@@ -85,9 +85,25 @@ onUnmounted(() => {
             line-height: 1.6;
             border-radius: 4px;
             transition: 0.1s background-color;
+            white-space: pre;
+            position: relative;
 
             &:hover {
                 background-color: #ffffff1f;
+            }
+
+            &.submenu {
+                padding-right: 16px;
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    right: 4px; top: 50%;
+                    translate: 0 -50%;
+                    border-left: 6px solid #ffffff;
+                    border-top: 6px solid transparent;
+                    border-bottom: 6px solid transparent;
+                }
             }
         }
     }

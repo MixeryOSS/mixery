@@ -92,6 +92,7 @@ export class PluckNode implements INode<PluckNode, any> {
         return {
             typeId: PluckNode.ID,
             label: "Pluck",
+            category: "Instruments",
             createNew(project, context, nodeId) {
                 return new PluckNode(nodeId, project.workspace.audio);
             },

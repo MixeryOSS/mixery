@@ -111,6 +111,7 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
         return {
             typeId: SineOscillatorNode.ID,
             label: "Sine Oscillator",
+            category: "Synthesizing",
             createNew(project, context, nodeId) {
                 return new SineOscillatorNode(nodeId, project.workspace.audio);
             },

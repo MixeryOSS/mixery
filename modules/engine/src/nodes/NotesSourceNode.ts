@@ -61,6 +61,7 @@ export class NotesSourceNode implements INode<NotesSourceNode, NotesSourceNodeDa
         return {
             typeId: NotesSourceNode.ID,
             label: "Notes Source",
+            category: "Inputs/Outputs",
             createNew(workspace, context, nodeId) {
                 return new NotesSourceNode(nodeId);
             },

@@ -46,6 +46,7 @@ export class ConstantNode implements INode<ConstantNode, number> {
         return {
             typeId: ConstantNode.ID,
             label: "Constant",
+            category: "Inputs/Outputs",
             createNew(project, context, nodeId) {
                 return new ConstantNode(nodeId, project.workspace.audio);
             },

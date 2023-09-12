@@ -54,6 +54,7 @@ export class GainNode implements INode<GainNode, number> {
         return {
             typeId: GainNode.ID,
             label: "Gain",
+            category: "Audio Effects",
             createNew(project, context, nodeId) {
                 return new GainNode(nodeId, project.workspace.audio);
             },
