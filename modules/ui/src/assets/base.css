@@ -23,7 +23,7 @@ body {
   background: var(--color-background);
   transition: color 0.5s, background-color 0.5s;
   line-height: 1.9;
-  letter-spacing: 0.5;
+  letter-spacing: 0.4px;
   font-family: 'Nunito Sans', 'Segoe UI', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 14px;
   text-rendering: optimizeLegibility;
