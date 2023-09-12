@@ -84,7 +84,8 @@ watch(patternEditorVisible, () => nukeAllKeybindsIfEmpty());
 watch(nodesEditorVisible, () => nukeAllKeybindsIfEmpty());
 
 function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
-    const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button"), v => v.parentElement);
+    console.log(1);
+    const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button") || v.classList.contains("digital-1d-slider"), v => v.parentElement);
 
     if (traversed) {
         const box = traversed.getBoundingClientRect();
@@ -267,12 +268,32 @@ getWorkspace().workspace.loadingManager.onStateChange.listen(e => {
                 Help
             </WorkspaceToolsbarButton>
             <div class="separator"></div>
-            <WorkspaceToolsbarButton ref="metronomeButton" :highlight="metronome" @pointerdown="metronome = !metronome" is-icon><MixeryIcon :type="metronomeSymbol" /></WorkspaceToolsbarButton>
+            <WorkspaceToolsbarButton
+                ref="metronomeButton"
+                :highlight="metronome"
+                @pointerdown="metronome = $event.buttons == 0b001? !metronome : metronome"
+                @contextmenu="$event.preventDefault(); openToolsbarContextMenu($event, [
+                    {
+                        label: 'Default metronome sound'
+                    }
+                ])"
+                is-icon
+            ><MixeryIcon :type="metronomeSymbol" /></WorkspaceToolsbarButton>
             <Digital1DSlider
                 name="BPM"
                 display-mode="decimal"
                 :model-value="reactiveBpm"
                 @update:model-value="sliders$changeBpm"
+                @pointerdown="$event.buttons == 0b010? ($event.stopPropagation(), openToolsbarContextMenu($event, [
+                    { label: 'Very slow', bpm: 80 },
+                    { label: 'Slow', bpm: 110 },
+                    { label: 'Average', bpm: 140 },
+                    { label: 'Fast', bpm: 185 },
+                    { label: 'Very fast', bpm: 210 },
+                ].map(v => ({
+                    label: `${v.label} (${v.bpm} BPM)`,
+                    onClick() { sliders$changeBpm(v.bpm) },
+                })))) : 0"
                 :min=10 :max=1000
             />
             <div class="separator"></div>
