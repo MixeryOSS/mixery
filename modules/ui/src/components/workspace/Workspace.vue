@@ -84,7 +84,6 @@ watch(patternEditorVisible, () => nukeAllKeybindsIfEmpty());
 watch(nodesEditorVisible, () => nukeAllKeybindsIfEmpty());
 
 function openToolsbarContextMenu(event: MouseEvent, menu: ContextMenuEntry[]) {
-    console.log(1);
     const traversed = traverse(event.target as HTMLElement, v => v.classList.contains("toolsbar-button") || v.classList.contains("digital-1d-slider"), v => v.parentElement);
 
     if (traversed) {

@@ -1,22 +1,57 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useTrackableXY } from '../composes';
+import { computed, nextTick, onMounted, ref } from 'vue';
+import { useParentState, useTrackableXY } from '../composes';
+import { DoubleClickHandler } from '@/handling/DoubleClickHandler';
 
 const props = defineProps<{
     name: string,
     modelValue: number,
     displayMode?: "decimal" | "time",
     min?: number,
-    max?: number
+    max?: number,
+    doubleClickSpeed?: number
 }>();
 
 const emit = defineEmits(['update:modelValue']);
 
-const value = computed({
-    get() { return +props.modelValue; },
-    set(v) { emit("update:modelValue", v); }
+const value = useParentState<number>("modelValue", props, emit);
+const initialValue = ref<number>(value.value);
+const manualMode = ref(false);
+const valueRef = ref<HTMLDivElement>();
+const manualText = ref("");
+
+const doubleclick = new DoubleClickHandler(() => props.doubleClickSpeed ?? 500, () => {
+    initialValue.value = value.value;
+    manualText.value = (value.value / (props.displayMode == "time"? 1000 : 1)).toFixed(props.displayMode == "time"? 3 : 2);
+    manualMode.value = true;
+    nextTick(() => valueRef.value?.focus());
 });
+
+function clamp(v: number) {
+    if (!v) v = initialValue.value;
+    if (props.min != undefined) v = Math.max(props.min, v);
+    if (props.max != undefined) v = Math.min(props.max, v);
+    return v;
+}
+
+function onBeforeInput(event: KeyboardEvent) {
+    if (!manualMode.value) return;
+    event.stopPropagation();
+
+    if (event.key == "Enter" || event.key == "Escape") {
+        event.preventDefault();
+        manualMode.value = false;
+    }
+}
+
+function onInput(event: Event) {
+    const content = (event.target as HTMLDivElement).textContent;
+    manualText.value = content ?? "";
+    if (content != null && content.trim().length > 0) value.value = clamp((+content) * (props.displayMode == "time"? 1000 : 1));
+}
+
 const displayValue = computed(() => {
+    if (manualMode.value) return manualText.value;
     if (props.displayMode == "time") {
         const totalMs = value.value;
         const ms = totalMs % 1000;
@@ -55,8 +90,9 @@ onMounted(() => {
     });
 });
 
-function lockPointer(event: PointerEvent) {
-    root.value!.requestPointerLock();
+function pointerDown(event: PointerEvent) {
+    doubleclick.mouseDown(event);
+    if (!manualMode.value) root.value!.requestPointerLock();
 }
 
 function unlockPointer(event: PointerEvent) {
@@ -65,8 +101,14 @@ function unlockPointer(event: PointerEvent) {
 </script>
 
 <template>
-    <div class="digital-1d-slider" ref="root" @pointerdown="lockPointer" @pointerup="unlockPointer">
-        <div class="value">{{ displayValue }}</div>
+    <div class="digital-1d-slider" ref="root" @pointerdown="pointerDown" @pointerup="unlockPointer">
+        <div class="value"
+            :contenteditable="manualMode"
+            @blur="manualMode = false"
+            @keydown="onBeforeInput"
+            @input="onInput"
+            ref="valueRef"
+        >{{ displayValue }}</div>
         <div class="name">{{ props.name }}</div>
     </div>
 </template>
@@ -92,6 +134,10 @@ function unlockPointer(event: PointerEvent) {
     .name {
         color: #b6b6b6;
         line-height: 1.4;
+    }
+
+    .value {
+        outline: none;
     }
 
     &::before {
