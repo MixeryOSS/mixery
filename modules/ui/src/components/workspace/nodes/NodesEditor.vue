@@ -368,6 +368,7 @@ function onPointerMove(event: PointerEvent) {
                 lastPort?.type == "mixery:group_placeholder_port" ||
                 port?.type == "mixery:group_placeholder_port"
             ) {
+                if (port?.type == "mixery:group_placeholder_port" && lastPort?.type == "mixery:group_placeholder_port") return;
                 targettingPort = port;
             }
         });
@@ -383,6 +384,7 @@ function onPointerUp(event: PointerEvent) {
 
     if (lastNode) {
         if (lastPort && targettingPort) {
+            if (lastPort.type == "mixery:group_placeholder_port" && targettingPort.type == "mixery:group_placeholder_port") return;
             if (lastPort instanceof GroupPlaceholderPort) {
                 lastPort.handlePlaceholderConnectTo(targettingPort);
             } else if (targettingPort instanceof GroupPlaceholderPort) {
