@@ -84,7 +84,7 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
         return {
             typeId: UnpackNoteNode.ID,
             label: "Unpack Note",
-            category: "Synthesizing",
+            category: "Synthesizers",
             createNew(project, context, nodeId) {
                 return new UnpackNoteNode(nodeId, project.workspace.audio);
             },
