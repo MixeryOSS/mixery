@@ -25,6 +25,7 @@ export * from "./nodes/group/GroupIONode.js";
 export * from "./nodes/group/GroupNode.js";
 export * from "./nodes/group/GroupPlaceholderPort.js";
 
+export * from "./nodes/oscillators/NoiseNode.js";
 export * from "./nodes/oscillators/SineOscillatorNode.js";
 
 export * from "./nodes/ports/IPort.js";
