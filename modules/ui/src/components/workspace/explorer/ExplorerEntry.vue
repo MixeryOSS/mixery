@@ -234,6 +234,12 @@ function onDrop(event: DragEvent) {
         flex-direction: column;
         background-color: #0000003f;
         padding-left: 12px;
+
+        &:empty::before {
+            content: 'Empty folder. Drag and drop files from your file explorer to the folder name to add.';
+            line-height: 1.4;
+            padding: 6px 0;
+        }
     }
 }
 </style>
