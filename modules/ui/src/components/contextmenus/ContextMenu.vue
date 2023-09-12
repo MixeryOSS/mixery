@@ -79,6 +79,10 @@ onUnmounted(() => {
         padding: 4px;
         box-shadow: 0 0 12px #000000;
 
+        &:last-child {
+            border: 1px solid var(--color-accent);
+        }
+
         .entry {
             height: 20px;
             padding: 3px 6px;
