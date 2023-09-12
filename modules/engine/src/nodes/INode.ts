@@ -58,6 +58,12 @@ export interface INode<T extends INode<T, TData>, TData> {
      * Calculate release time. Used for synths to know when to disconnect cloned nodes from network.
      */
     calculateReleaseTime?(): number;
+
+    /**
+     * Destroy the node. You might want to stop all buffer source nodes when destroying to avoid
+     * memory leaks.
+     */
+    destroy?(): void;
 }
 
 export type INodeAny = INode<any, any>;

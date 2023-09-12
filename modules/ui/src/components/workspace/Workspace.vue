@@ -169,9 +169,11 @@ function openProject() {
         getWorkspace().workspace.loadingManager.add(project
             .loadFromBlob(file)
             .then(() => {
+                const oldProject = getWorkspace().project;
                 getWorkspace().setProject(project);
                 explorerPaneUpdateHandle.value++;
                 nodesEditorUpdateHandle.value++;
+                oldProject.destroy();
             })
         );
     };

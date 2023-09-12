@@ -75,6 +75,12 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
         return node;
     }
 
+    destroy(): void {
+        (this.audioOut.socket as OscillatorNode).stop();
+        this.#freq.stop();
+        this.#detune.stop();
+    }
+
     static createFactory(): NodeFactory<SineOscillatorNode, SineOscillatorData> {
         return {
             typeId: SineOscillatorNode.ID,

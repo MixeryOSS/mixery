@@ -42,6 +42,10 @@ export class ConstantNode implements INode<ConstantNode, number> {
         return node;
     }
 
+    destroy(): void {
+        this.backed.stop();
+    }
+
     static createFactory(): NodeFactory<ConstantNode, number> {
         return {
             typeId: ConstantNode.ID,

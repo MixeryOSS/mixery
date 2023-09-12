@@ -81,6 +81,7 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
                 synthNote.group.children.sendNoteSignal("Default Channel", note);
                 synthNote.callbackThing.addEventListener("ended", () => {
                     synthNote.group.children.audioOut.disconnect(destination);
+                    synthNote.group.destroy();
                 });
                 const releaseTime = Math.max(...synthNote.group.children.nodes.map(v => v.calculateReleaseTime? v.calculateReleaseTime() : 0));
                 synthNote.callbackThing.stop(this.children.audioOut.context.currentTime + delay + releaseTime / 1000);
@@ -128,6 +129,10 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
 
         (node.synthAudioGain.socket as AudioParam).value = (this.synthAudioGain.socket as AudioParam).value;
         return node;
+    }
+
+    destroy(): void {
+        this.children.destroy();
     }
 
     static createFactory(): NodeFactory<GroupNode, GroupNodeSavedData> {

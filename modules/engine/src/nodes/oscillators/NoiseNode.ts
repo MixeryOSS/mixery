@@ -52,7 +52,12 @@ export class NoiseNode implements INode<NoiseNode, any> {
     }
 
     createCopy(): NoiseNode {
-        return new NoiseNode(this.nodeId, (this.audioOut.socket as GainNode).context);
+        return new NoiseNode(this.nodeId, (this.audioOut.socket as AudioBufferSourceNode).context);
+    }
+
+    destroy(): void {
+        const source = this.audioOut.socket as AudioBufferSourceNode;
+        source.stop();
     }
 
     static createFactory(): NodeFactory<NoiseNode, any> {

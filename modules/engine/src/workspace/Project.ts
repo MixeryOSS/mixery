@@ -58,6 +58,13 @@ export class Project {
         const savedData: SavedProject = await stream.readObject();
         await this.loadFromObject(savedData);
     }
+
+    /**
+     * Destroy the project. You should call this when unloading your project to avoid memory leaks.
+     */
+    destroy() {
+        this.nodes.destroy();
+    }
 }
 
 export interface ProjectMetadata {

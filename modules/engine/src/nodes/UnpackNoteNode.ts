@@ -80,6 +80,11 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
         return node;
     }
 
+    destroy(): void {
+        (this.freqOut.socket as ConstantSourceNode).stop();
+        (this.velocityOut.socket as ConstantSourceNode).stop();
+    }
+
     static createFactory(): NodeFactory<UnpackNoteNode, UnpackNoteNodeData> {
         return {
             typeId: UnpackNoteNode.ID,

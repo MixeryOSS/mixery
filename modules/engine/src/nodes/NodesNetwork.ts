@@ -132,6 +132,10 @@ export class NodesNetwork {
 
         return this;
     }
+
+    destroy() {
+        this.nodes.forEach(node => { if (node.destroy) node.destroy(); });
+    }
 }
 
 export interface SavedNodesNetwork {
