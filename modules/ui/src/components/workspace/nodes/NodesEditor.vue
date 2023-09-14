@@ -455,6 +455,7 @@ function deleteNode(node: INode<any, any>) {
     });
 
     getCurrentGroup().nodes.splice(getCurrentGroup().nodes.indexOf(node));
+    if (node.destroy) node.destroy();
     getWorkspace().selectedNode = undefined;
     selectedNodeRefForRendering.value = undefined;
 }
