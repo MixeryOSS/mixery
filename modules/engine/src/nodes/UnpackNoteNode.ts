@@ -23,6 +23,7 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
     midiIn: MidiPort;
     freqOut: SignalPort;
     velocityOut: SignalPort;
+    midiIndexOut: SignalPort;
 
     constructor(public readonly nodeId: string, audio: BaseAudioContext) {
         this.midiIn = new MidiPort(this, "midiIn");
@@ -34,11 +35,17 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
         this.velocityOut = new SignalPort(this, "velocity", audio, audio.createConstantSource());
         this.velocityOut.portName = "Velocity";
 
+        this.midiIndexOut = new SignalPort(this, "midiIndex", audio, audio.createConstantSource());
+        this.midiIndexOut.portName = "MIDI Index";
+
         (this.freqOut.socket as ConstantSourceNode).offset.value = 0;
         (this.freqOut.socket as ConstantSourceNode).start();
 
         (this.velocityOut.socket as ConstantSourceNode).offset.value = 0;
         (this.velocityOut.socket as ConstantSourceNode).start();
+
+        (this.midiIndexOut.socket as ConstantSourceNode).offset.value = 0;
+        (this.midiIndexOut.socket as ConstantSourceNode).start();
 
         this.midiIn.onNoteEvent.listen(note => {
             if (note.eventType == "keyup") return;
@@ -52,9 +59,11 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
 
             const freq = temperament.getFrequency(note.midiIndex, 69, 440);
             const vel = note.velocity;
+            const midi = note.midiIndex;
 
             (this.freqOut.socket as ConstantSourceNode).offset.setValueAtTime(freq, atTime);
             (this.velocityOut.socket as ConstantSourceNode).offset.setValueAtTime(vel, atTime);
+            (this.midiIndexOut.socket as ConstantSourceNode).offset.setValueAtTime(midi, atTime);
         });
     }
 
@@ -67,7 +76,7 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
     }
 
     getOutputPorts(): IPort<any>[] {
-        return [this.freqOut, this.velocityOut];
+        return [this.freqOut, this.velocityOut, this.midiIndexOut];
     }
 
     saveNode(): UnpackNoteNodeData {
@@ -83,6 +92,7 @@ export class UnpackNoteNode implements INode<UnpackNoteNode, UnpackNoteNodeData>
     destroy(): void {
         (this.freqOut.socket as ConstantSourceNode).stop();
         (this.velocityOut.socket as ConstantSourceNode).stop();
+        (this.midiIndexOut.socket as ConstantSourceNode).stop();
     }
 
     static createFactory(): NodeFactory<UnpackNoteNode, UnpackNoteNodeData> {
