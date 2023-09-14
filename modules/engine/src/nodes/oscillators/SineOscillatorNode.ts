@@ -24,29 +24,20 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
 
     audioOut: SignalPort;
 
-    #freq: ConstantSourceNode;
-    #detune: ConstantSourceNode;
-
     constructor(public readonly nodeId: string, audio: BaseAudioContext) {
-        this.freqIn = new SignalPort(this, "freqIn", audio, (this.#freq = audio.createConstantSource()).offset);
-        this.freqIn.portName = "Frequency";
-        this.#freq.offset.value = 440;
-        this.#freq.start();
-
-        this.detuneIn = new SignalPort(this, "detuneIn", audio, (this.#detune = audio.createConstantSource()).offset);
-        this.detuneIn.portName = "Detune";
-        this.#detune.offset.value = 0;
-        this.#detune.start();
-
         this.audioOut = new SignalPort(this, "audioOut", audio, audio.createOscillator());
         this.audioOut.portName = "Audio";
         (this.audioOut.socket as OscillatorNode).type = "sine";
-        this.#freq.connect((this.audioOut.socket as OscillatorNode).frequency);
-        this.#detune.connect((this.audioOut.socket as OscillatorNode).detune);
         (this.audioOut.socket as OscillatorNode).start();
 
-        this.controls.push(NodeControls.makeParamControl("Frequency (Hz)", this.#freq.offset, 0));
-        this.controls.push(NodeControls.makeParamControl("Detune (cents)", this.#detune.offset));
+        this.freqIn = new SignalPort(this, "freqIn", audio, (this.audioOut.socket as OscillatorNode).frequency);
+        this.freqIn.portName = "Frequency";
+
+        this.detuneIn = new SignalPort(this, "detuneIn", audio, (this.audioOut.socket as OscillatorNode).detune);
+        this.detuneIn.portName = "Detune";
+
+        this.controls.push(NodeControls.makeParamControl("Frequency (Hz)", (this.audioOut.socket as OscillatorNode).frequency, 0));
+        this.controls.push(NodeControls.makeParamControl("Detune (cents)", (this.audioOut.socket as OscillatorNode).detune));
     }
 
     getControls(): NodeControl<any>[] {
@@ -63,22 +54,20 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
 
     saveNode(): SineOscillatorData {
         return {
-            frequency: this.#freq.offset.value,
-            detune: this.#detune.offset.value
+            frequency: (this.audioOut.socket as OscillatorNode).frequency.value,
+            detune: (this.audioOut.socket as OscillatorNode).detune.value
         };
     }
 
     createCopy(): SineOscillatorNode {
         const node = new SineOscillatorNode(this.nodeId, (this.audioOut.socket as AudioNode).context);
-        node.#freq.offset.value = this.#freq.offset.value;
-        node.#detune.offset.value = this.#detune.offset.value;
+        (node.freqIn.socket as AudioParam).value = (this.freqIn.socket as AudioParam).value;
+        (node.detuneIn.socket as AudioParam).value = (this.detuneIn.socket as AudioParam).value;
         return node;
     }
 
     destroy(): void {
         (this.audioOut.socket as OscillatorNode).stop();
-        this.#freq.stop();
-        this.#detune.stop();
     }
 
     static createFactory(): NodeFactory<SineOscillatorNode, SineOscillatorData> {
@@ -91,8 +80,8 @@ export class SineOscillatorNode implements INode<SineOscillatorNode, SineOscilla
             },
             createExisting(project, context, nodeId, data) {
                 const node = new SineOscillatorNode(nodeId, project.workspace.audio);
-                node.#freq.offset.value = data.frequency;
-                node.#detune.offset.value = data.detune;
+                (node.freqIn.socket as AudioParam).value = data.frequency;
+                (node.detuneIn.socket as AudioParam).value = data.detune;
                 return node;
             }
         };
