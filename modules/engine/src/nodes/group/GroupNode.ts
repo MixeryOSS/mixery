@@ -4,6 +4,7 @@ import { GroupIONode, GroupInputsNode, GroupOutputsNode } from "./GroupIONode.js
 
 interface GroupNodeSavedData {
     children: SavedNodesNetwork;
+    synthGain: number;
 }
 
 interface SynthPlayingNote {
@@ -107,7 +108,10 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
     }
 
     saveNode(): GroupNodeSavedData {
-        return { children: this.children.save() };
+        return {
+            children: this.children.save(),
+            synthGain: (this.synthAudioGain.socket as AudioParam).value
+        };
     }
 
     createCopy(): GroupNode {
@@ -177,6 +181,9 @@ export class GroupNode implements INode<GroupNode, GroupNodeSavedData> {
 
                     portFrom.onConnectedToPort(portTo);
                 });
+
+                // Synth
+                (node.synthAudioGain.socket as AudioParam).value = data.synthGain ?? 1.0;
 
                 return node;
             }
