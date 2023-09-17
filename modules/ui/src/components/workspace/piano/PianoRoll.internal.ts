@@ -20,8 +20,8 @@ export namespace internal {
 
         createCopy(): NoteObject {
             const cloned = structuredClone(toRaw(this.unwrap));
-            if (this._selectedClip) this._selectedClip.notes.push(cloned);
-            return new NoteObject(this._selectedClip, cloned);
+            if (this._selectedClip) toRaw(this._selectedClip).notes.push(cloned);
+            return new NoteObject(this._selectedClip? toRaw(this._selectedClip) : undefined, cloned);
         }
     }
 }

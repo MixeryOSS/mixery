@@ -168,6 +168,9 @@ export namespace Tools {
                 this.replicate.trackPosition = undefined;
                 context.clearSelection();
                 context.addSelection(obj);
+
+                // TODO add multiple notes selecting to piano roll
+                context.deleteObject(this.replicate);
             } else {
                 this.filling = true;
                 this.lastPosition = position;
